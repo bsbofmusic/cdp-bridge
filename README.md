@@ -54,6 +54,7 @@ npm run dist:win
 - 创建桌面快捷方式与开始菜单快捷方式
 - 安装完成后自动启动
 - 应用内支持开机启动开关
+- 安装器提供 `Clean install` 选项，用于清理开发版残留和旧托盘冲突
 
 ## 清洁安装
 
@@ -69,6 +70,12 @@ clean-install.cmd
 - 清理开发版残留目录 `AppData\Roaming\cdp-bridge-dev`
 - 清理本地测试安装目录
 
+安装器里的 `Clean install` 选项解决的是：
+
+- 安装后仍然打开旧开发版窗口
+- 旧托盘进程抢占新安装版单实例
+- 开发版残留目录导致配置和窗口状态混乱
+
 然后再运行最新安装包：
 
 `dist/CDP Bridge-Setup-0.1.0.exe`
@@ -78,9 +85,11 @@ clean-install.cmd
 - 一键桥接
 - 一键修复
 - 一键复制 WS / HTTP endpoint
+- 一键复制给 OpenClaw 的完整配置 prompt
 - 一键轮换 token
 - 打开配置与日志目录
 - 开机启动开关
+- 最小化到托盘开关
 
 ## 当前范围
 

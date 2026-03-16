@@ -21,12 +21,13 @@ function render(state) {
   `;
 
   actionsRoot.innerHTML = `
-    <button data-action="copy-ws">Copy WS endpoint</button>
-    <button data-action="copy-http">Copy HTTP endpoint</button>
-    <button data-action="repair">One-click repair</button>
-    <button data-action="restart">Restart bridge</button>
-    <button data-action="rotate-token">Rotate token</button>
-    <button data-action="refresh">Refresh status</button>
+    <button data-action="copy-ws" title="Copy the bridge WebSocket address for a remote CDP client.">Copy WS endpoint</button>
+    <button data-action="copy-http" title="Copy the bridge HTTP version endpoint for diagnostics and discovery.">Copy HTTP endpoint</button>
+    <button data-action="copy-openclaw-prompt" title="Copy a ready-to-paste prompt that tells OpenClaw to use this bridge instead of raw port 9222.">Copy OpenClaw Prompt</button>
+    <button data-action="repair" title="Stop stale browser processes, relaunch Chrome, and rebuild the bridge automatically.">One-click repair</button>
+    <button data-action="restart" title="Restart the bridge service without rotating your token.">Restart bridge</button>
+    <button data-action="rotate-token" title="Generate a fresh token and restart the bridge to invalidate old links.">Rotate token</button>
+    <button data-action="refresh" title="Refresh the browser, Tailscale, and bridge status right now.">Refresh status</button>
   `;
 
   diagnosticsRoot.innerHTML = `
@@ -38,6 +39,7 @@ function render(state) {
   `;
 
   document.querySelector('[data-setting="launchOnLogin"]').checked = Boolean(state.launchOnLogin);
+  document.querySelector('[data-setting="minimizeToTray"]').checked = Boolean(state.minimizeToTray);
 }
 
 async function boot() {
@@ -70,6 +72,9 @@ document.addEventListener('click', async (event) => {
   if (action === 'copy-http') {
     await window.bridgeApp.invoke('bridge:copy', { type: 'http' });
   }
+  if (action === 'copy-openclaw-prompt') {
+    await window.bridgeApp.invoke('bridge:copy-openclaw-prompt');
+  }
   if (action === 'repair') {
     await window.bridgeApp.invoke('bridge:repair');
   }
@@ -88,14 +93,21 @@ document.addEventListener('click', async (event) => {
 
 document.addEventListener('change', async (event) => {
   const checkbox = event.target.closest('[data-setting="launchOnLogin"]');
-  if (!checkbox) {
+  if (checkbox) {
+    await window.bridgeApp.invoke('bridge:set-launch-on-login', {
+      enabled: checkbox.checked
+    });
+    setFeedback(checkbox.checked ? '已开启开机启动。' : '已关闭开机启动。');
     return;
   }
 
-  await window.bridgeApp.invoke('bridge:set-launch-on-login', {
-    enabled: checkbox.checked
-  });
-  setFeedback(checkbox.checked ? '已开启开机启动。' : '已关闭开机启动。');
+  const trayCheckbox = event.target.closest('[data-setting="minimizeToTray"]');
+  if (trayCheckbox) {
+    await window.bridgeApp.invoke('bridge:set-minimize-to-tray', {
+      enabled: trayCheckbox.checked
+    });
+    setFeedback(trayCheckbox.checked ? '已开启最小化到托盘。' : '已关闭最小化到托盘。');
+  }
 });
 
 void boot();

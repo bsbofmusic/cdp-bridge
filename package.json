@@ -32,7 +32,10 @@
     },
     "files": [
       "electron/**/*",
+      "build/**/*",
+      "scripts/**/*",
       "src/**/*",
+      "clean-install.cmd",
       "package.json",
       "README.md"
     ],
@@ -52,6 +55,7 @@
       "signAndEditExecutable": false
     },
     "nsis": {
+      "include": "build/installer.nsh",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,

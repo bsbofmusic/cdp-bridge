@@ -14,10 +14,16 @@
           <h1>CDP Bridge</h1>
           <p>本地浏览器通过 Tailscale 暴露给远端 OpenClaw。</p>
         </div>
-        <label class="toggle">
-          <input type="checkbox" data-setting="launchOnLogin" />
-          <span>Launch on login</span>
-        </label>
+        <div class="header-toggles">
+          <label class="toggle">
+            <input type="checkbox" data-setting="launchOnLogin" title="Start CDP Bridge automatically when you sign into Windows." />
+            <span>Launch on login</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" data-setting="minimizeToTray" title="Hide the app to the system tray when you minimize or close the window." />
+            <span>Minimize to tray</span>
+          </label>
+        </div>
       </header>
       <section id="feedback" class="feedback">正在连接本地桥接服务…</section>
       <section id="status"></section>

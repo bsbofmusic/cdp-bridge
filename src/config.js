@@ -19,6 +19,7 @@ function createDefaultConfig() {
     browserName: null,
     launchChrome: true,
     launchOnLogin: false,
+    minimizeToTray: true,
     bindHost: '0.0.0.0',
     autoRepair: true,
     healthCheckIntervalMs: 15000,

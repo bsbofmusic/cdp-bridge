@@ -19,6 +19,36 @@ const supervisor = createBridgeSupervisor();
 let tray = null;
 let mainWindow = null;
 
+function buildOpenClawPrompt(snapshot) {
+  return [
+    '不要再尝试连接 Windows 上的原始 Chrome CDP 端口 `9222`，也不要要求我把 `--remote-debugging-address=0.0.0.0` 暴露到公网或局域网。',
+    '',
+    '改为使用我本地 `cdp-bridge` 提供的 WebSocket CDP 地址。',
+    '',
+    '请按下面要求配置：',
+    '',
+    '1. 使用我提供的这条 WS endpoint 作为唯一的 CDP 连接地址：',
+    `\`${snapshot.wsEndpoint ?? '<WS endpoint unavailable>'}\``,
+    '',
+    '2. 不要再连接：',
+    '- `http://localhost:9222`',
+    '- `http://<任何IP>:9222`',
+    '- `ws://<任何IP>:9222/...`',
+    '',
+    '3. 不要要求开放 Windows 防火墙的 `9222`',
+    '4. 不要要求 Chrome 绑定 `0.0.0.0`',
+    '5. 只通过这条 bridge WS 地址连接浏览器',
+    '',
+    '如果需要探测版本信息，可以使用这个 HTTP endpoint：',
+    `\`${snapshot.versionEndpoint ?? '<HTTP endpoint unavailable>'}\``,
+    '',
+    '请直接基于这条 bridge WS endpoint 完成浏览器配置，并告诉我：',
+    '- 你最终采用的配置项名称',
+    '- 是否连接成功',
+    '- 如果失败，返回你实际尝试连接的完整地址'
+  ].join('\n');
+}
+
 function createTrayIcon(status) {
   const palette = {
     running: '#22c55e',
@@ -64,11 +94,18 @@ async function copyEndpoint(type) {
   showNotification(`${type === 'ws' ? 'WS' : 'HTTP'} endpoint copied.`);
 }
 
+async function copyOpenClawPrompt() {
+  const snapshot = supervisor.getSnapshot();
+  clipboard.writeText(buildOpenClawPrompt(snapshot));
+  showNotification('OpenClaw prompt copied.');
+}
+
 function buildTrayMenu(snapshot) {
   return Menu.buildFromTemplate([
     { label: `Status: ${snapshot.phase}`, enabled: false },
     { label: snapshot.wsEndpoint ?? 'WS endpoint unavailable', click: () => void copyEndpoint('ws'), enabled: Boolean(snapshot.wsEndpoint) },
     { label: snapshot.versionEndpoint ?? 'HTTP endpoint unavailable', click: () => void copyEndpoint('http'), enabled: Boolean(snapshot.versionEndpoint) },
+    { label: 'Copy OpenClaw prompt', click: () => void copyOpenClawPrompt(), enabled: Boolean(snapshot.wsEndpoint) },
     { type: 'separator' },
     { label: 'Open status window', click: showWindow },
     { label: 'One-click bridge', click: () => void supervisor.restart() },
@@ -84,6 +121,15 @@ function buildTrayMenu(snapshot) {
       click: ({ checked }) => {
         supervisor.updateConfig((config) => ({ ...config, launchOnLogin: checked }));
         updateLaunchOnLogin(checked);
+        void supervisor.refresh();
+      }
+    },
+    {
+      label: 'Minimize to tray',
+      type: 'checkbox',
+      checked: Boolean(snapshot.minimizeToTray),
+      click: ({ checked }) => {
+        supervisor.updateConfig((config) => ({ ...config, minimizeToTray: checked }));
         void supervisor.refresh();
       }
     },
@@ -125,7 +171,21 @@ function createWindow() {
   });
 
   mainWindow.on('close', (event) => {
+    if (!app.isQuitting && supervisor.getSnapshot().minimizeToTray !== false) {
+      event.preventDefault();
+      mainWindow.hide();
+      return;
+    }
+
     if (!app.isQuitting) {
+      event.preventDefault();
+      app.isQuitting = true;
+      void supervisor.stop().finally(() => app.quit());
+    }
+  });
+
+  mainWindow.on('minimize', (event) => {
+    if (supervisor.getSnapshot().minimizeToTray !== false) {
       event.preventDefault();
       mainWindow.hide();
     }
@@ -140,9 +200,14 @@ function wireIpc() {
   ipcMain.handle('bridge:repair', async () => supervisor.repair());
   ipcMain.handle('bridge:rotate-token', async () => supervisor.rotateToken());
   ipcMain.handle('bridge:copy', async (_event, payload) => copyEndpoint(payload.type));
+  ipcMain.handle('bridge:copy-openclaw-prompt', async () => copyOpenClawPrompt());
   ipcMain.handle('bridge:set-launch-on-login', async (_event, payload) => {
     supervisor.updateConfig((config) => ({ ...config, launchOnLogin: payload.enabled }));
     updateLaunchOnLogin(payload.enabled);
+    return supervisor.refresh();
+  });
+  ipcMain.handle('bridge:set-minimize-to-tray', async (_event, payload) => {
+    supervisor.updateConfig((config) => ({ ...config, minimizeToTray: payload.enabled }));
     return supervisor.refresh();
   });
 }
