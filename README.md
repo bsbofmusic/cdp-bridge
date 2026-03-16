@@ -1,102 +1,172 @@
-# CDP Bridge v1
+# Agent Browser Bridge
+
+Lightweight Windows tray app for exposing a local Chrome-family browser to AI agents over a Tailscale-secured CDP bridge.
 
 Maintained by `bsbofmusic`.
 
-本地 Windows 托盘工具，负责：
+## What it is
 
-- 自动发现并拉起本地 Chrome / Edge / Chromium
-- 自动检测 `Tailscale` 状态并生成可用 endpoint
-- 维护本地 CDP WebSocket / HTTP bridge
-- 提供一键桥接、一键修复、token 轮换、开机启动
-- 提供中英切换、OpenClaw Prompt 复制、正规卸载入口
-- 给远端 `OpenClaw` / 其他 CDP 客户端提供可直连地址
+Agent Browser Bridge keeps a local browser available for remote agent workflows without exposing raw Chrome port `9222`.
 
-## 使用
+It is built for:
 
-1. 安装依赖：
+- OpenClaw
+- OpenCode
+- Codex-style agent workflows
+- Claude Code-style agent workflows
+- Playwright `connectOverCDP`
+- Any generic CDP client
+
+## Why this exists
+
+Raw Chrome remote debugging is powerful but unsafe to expose directly.
+
+This project adds a safer local bridge layer:
+
+- Chrome stays local
+- Tailscale provides private network reachability
+- The bridge exposes a tokenized CDP endpoint
+- The desktop app handles repair, prompts, and packaging
+
+## Features
+
+- Auto-detect and launch Chrome / Edge / Chromium
+- Tailscale-aware bridge endpoint generation
+- Windows tray app with taskbar and installer icons
+- Generic Agent Prompt for OpenClaw, OpenCode, Codex, and similar agents
+- Playwright snippet and developer CDP URL output
+- Self-healing browser reconnect and bridge repair
+- Launch-on-login and minimize-to-tray controls
+- Clean install flow for stale dev leftovers and old tray conflicts
+- Built-in uninstall entry and maintenance actions
+
+## Supported platforms
+
+- Local host: Windows
+- Remote clients: any device on the same Tailscale tailnet
+- Browser engines: Chrome / Edge / Chromium
+
+## Install
+
+Download the latest Windows installer from Releases.
+
+Or build it locally:
 
 ```bash
 npm install
-```
-
-2. 确保本机已安装并登录 `Tailscale`
-
-3. 启动 Electron 托盘版：
-
-```bash
-npm start
-```
-
-4. 如果只想跑命令行 bridge：
-
-```bash
-npm run start:bridge
-```
-
-5. 首次运行会生成配置：
-
-`%USERPROFILE%/.cdp-bridge/config.json`
-
-## 打包安装
-
-生成 Windows 安装包：
-
-```bash
 npm run dist:win
 ```
 
-构建产物输出到：
+Installer output:
 
-`dist/`
+- `dist/CDP Bridge-Setup-0.1.0.exe`
 
-安装器特性：
+## First run
 
-- 可选择安装目录
-- 创建桌面快捷方式与开始菜单快捷方式
-- 安装完成后自动启动
-- 应用内支持开机启动开关
-- 安装器提供 `Clean install` 选项，用于清理开发版残留和旧托盘冲突
-- 安装版提供正式窗口/任务栏图标
+1. Install and sign in to Tailscale on the local Windows machine.
+2. Launch `CDP Bridge`.
+3. Let the app detect and start a managed local browser.
+4. Use `Copy Generic Agent Prompt` as the default handoff for agents.
+5. Use the Developer section only if you need low-level access.
 
-## 清洁安装
+## Main UI model
 
-如果你之前运行过开发版，或者遇到“安装后还是旧界面”的情况，先执行：
+- **Quick Actions**: bridge controls and basic endpoint copy
+- **Agent Handoff**: the main end-user handoff area
+- **Developer**: Playwright and low-level CDP outputs
+- **Maintenance**: uninstall and clean install guidance
+
+## Generic Agent Prompt
+
+The primary output is a single generic prompt that explains:
+
+- background
+- goal
+- bridge endpoints
+- rules
+- step-by-step connection flow
+
+Use this first for most agents.
+
+## OpenClaw `MEDIA:./` syntax sugar
+
+For OpenClaw-compatible runtimes, local images can be referenced like this:
+
+```text
+MEDIA:./relative/path/to/file.png
+```
+
+This lets the runtime convert and upload the local image as a platform-native attachment.
+
+Useful for:
+
+- Discord
+- Telegram
+- Signal
+- other supported channels
+
+The runtime adapts the upload behavior to the target platform automatically.
+
+## Self-heal behavior
+
+If you close the managed browser and it opens again, that is expected.
+
+This app continuously checks browser and bridge health. If the browser/CDP path drops, it attempts to repair the connection by relaunching the browser and rebuilding the bridge.
+
+This is **not a bug**.
+
+## Clean install
+
+Use the installer option named `Clean install` if:
+
+- an old development build window still appears
+- a stale tray process hijacks the packaged app instance
+- previous local leftovers keep breaking the packaged app experience
+
+There is also a local helper:
 
 ```bash
 clean-install.cmd
 ```
 
-它会：
+It stops stale local processes and removes known development leftovers before reinstalling.
 
-- 停掉旧的 `CDP Bridge` / `electron` 进程
-- 清理开发版残留目录 `AppData\Roaming\cdp-bridge-dev`
-- 清理本地测试安装目录
+## Uninstall
 
-安装器里的 `Clean install` 选项解决的是：
+You can uninstall the app in two ways:
 
-- 安装后仍然打开旧开发版窗口
-- 旧托盘进程抢占新安装版单实例
-- 开发版残留目录导致配置和窗口状态混乱
+- use the built-in `Open Uninstaller` action from the app
+- run `Uninstall CDP Bridge.exe` from the install directory
 
-然后再运行最新安装包：
+## Development
 
-`dist/CDP Bridge-Setup-0.1.0.exe`
+Run locally:
 
-## 托盘能力
+```bash
+npm install
+npm start
+```
 
-- 一键桥接
-- 一键修复
-- 一键复制 WS / HTTP endpoint
-- 一键复制给 OpenClaw 的完整配置 prompt
-- 一键轮换 token
-- 打开配置与日志目录
-- 打开卸载程序
-- 开机启动开关
-- 最小化到托盘开关
-- 中英切换
+Run CLI bridge only:
 
-## 当前范围
+```bash
+npm run start:bridge
+```
 
-- 本地端：仅 Windows
-- 远端控制端：任何能加入同一 `Tailscale` tailnet 的系统
-- 浏览器：Chrome / Edge / Chromium
+Syntax check:
+
+```bash
+npm run check
+```
+
+## Project structure
+
+- `electron/` desktop shell, tray behavior, renderer UI
+- `src/` bridge core, browser management, supervisor, config
+- `build/` NSIS installer customization
+- `docs/` product and redesign planning
+- `scripts/` local helper scripts
+
+## License
+
+MIT

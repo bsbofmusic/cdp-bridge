@@ -9,8 +9,9 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero-card">
-        <div>
+      <!-- 顶部配置面板：毛玻璃材质，使用自制 Toggle 开关 -->
+      <section class="hero-card glass-panel">
+        <div class="hero-text">
           <p class="eyebrow" id="hero-eyebrow">Windows Local Browser Bridge</p>
           <h1 id="hero-title">CDP Bridge</h1>
           <p id="hero-subtitle">本地浏览器通过 Tailscale 暴露给远端 OpenClaw。</p>
@@ -23,54 +24,77 @@
               <option value="en-US">English</option>
             </select>
           </label>
-          <label class="toggle" title="Start CDP Bridge automatically when you sign into Windows.">
-            <input type="checkbox" data-setting="launchOnLogin" />
+          <label class="toggle-wrap toggle" title="Start CDP Bridge automatically when you sign into Windows.">
             <span id="launch-on-login-label">Launch on login</span>
+            <input type="checkbox" data-setting="launchOnLogin" />
           </label>
-          <label class="toggle" title="Hide the app to the system tray when you minimize or close the window.">
-            <input type="checkbox" data-setting="minimizeToTray" />
+          <label class="toggle-wrap toggle" title="Hide the app to the system tray when you minimize or close the window.">
             <span id="minimize-to-tray-label">Minimize to tray</span>
+            <input type="checkbox" data-setting="minimizeToTray" />
           </label>
         </div>
       </section>
 
-      <section id="feedback" class="feedback">正在连接本地桥接服务…</section>
+      <section id="feedback" class="feedback glass-panel">正在连接本地桥接服务…</section>
 
+      <!-- 双栏布局区域 -->
       <section class="content-grid">
-        <section class="panel status-panel">
-          <div class="panel-header">
-            <h2 id="status-panel-title">Bridge Status</h2>
-          </div>
-          <div id="status"></div>
-        </section>
+        <!-- 左栏布局：状态监控与诊断 -->
+        <div class="col-left">
+          <section class="panel status-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="status-panel-title">Bridge Status</h2>
+            </div>
+            <div id="status"></div>
+          </section>
 
-        <section class="panel actions-panel">
-          <div class="panel-header">
-            <h2 id="actions-panel-title">Quick Actions</h2>
-          </div>
-          <div id="actions" class="button-grid"></div>
-        </section>
+          <section class="panel diagnostics-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="diagnostics-panel-title">Diagnostics</h2>
+            </div>
+            <div id="diagnostics" class="diagnostics"></div>
+          </section>
+        </div>
 
-        <section class="panel diagnostics-panel">
-          <div class="panel-header">
-            <h2 id="diagnostics-panel-title">Diagnostics</h2>
-          </div>
-          <div id="diagnostics" class="diagnostics"></div>
-        </section>
+        <!-- 右栏布局：高频控制与接入 -->
+        <div class="col-right">
+          <section class="panel actions-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="actions-panel-title">Quick Actions</h2>
+            </div>
+            <!-- 这里只放系统的控制：重启、修复、基础地址 -->
+            <div id="actions" class="button-grid"></div>
+          </section>
 
-        <section class="panel maintenance-panel">
-          <div class="panel-header">
-            <h2 id="maintenance-panel-title">Maintenance</h2>
-          </div>
-          <div class="maintenance-copy" id="maintenance-copy">
-            这里可以处理卸载、清洁安装和版本切换等操作。
-          </div>
-          <div class="maintenance-actions">
-            <button data-action="open-uninstaller" id="open-uninstaller-button" title="Open the installed uninstaller so the app can be removed cleanly.">Open Uninstaller</button>
-          </div>
-        </section>
+          <section class="panel handoff-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="handoff-panel-title">Agent Handoff</h2>
+            </div>
+            <div id="handoff" class="button-grid handoff-grid"></div>
+          </section>
+
+          <section class="panel developer-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="developer-panel-title">Developer</h2>
+            </div>
+            <div id="developer" class="button-grid handoff-grid"></div>
+          </section>
+
+          <section class="panel maintenance-panel glass-panel">
+            <div class="panel-header">
+              <h2 id="maintenance-panel-title">Maintenance</h2>
+            </div>
+            <div class="maintenance-copy" id="maintenance-copy">
+              这里可以处理卸载、清洁安装和版本切换等操作。
+            </div>
+            <div class="maintenance-actions button-grid">
+              <button data-action="open-uninstaller" id="open-uninstaller-button" title="Open the installed uninstaller so the app can be removed cleanly.">Open Uninstaller</button>
+              <button data-action="copy-clean-install-guide" id="clean-install-guide-button" title="Copy a short explanation of when and why to use Clean install.">Copy Clean Install Guide</button>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
     <script src="./renderer.js"></script>
   </body>
-  </html>
+</html>

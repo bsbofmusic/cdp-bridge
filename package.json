@@ -57,6 +57,9 @@
     },
     "nsis": {
       "include": "build/installer.nsh",
+      "installerIcon": "electron/assets/app-icon.ico",
+      "uninstallerIcon": "electron/assets/app-icon.ico",
+      "installerHeaderIcon": "electron/assets/app-icon.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
