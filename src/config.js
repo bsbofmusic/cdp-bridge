@@ -20,6 +20,7 @@ function createDefaultConfig() {
     launchChrome: true,
     launchOnLogin: false,
     minimizeToTray: true,
+    language: 'zh-CN',
     bindHost: '0.0.0.0',
     autoRepair: true,
     healthCheckIntervalMs: 15000,

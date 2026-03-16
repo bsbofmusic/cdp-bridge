@@ -44,6 +44,7 @@
     },
     "artifactName": "${productName}-Setup-${version}.${ext}",
     "win": {
+      "icon": "electron/assets/app-icon.ico",
       "target": [
         {
           "target": "nsis",

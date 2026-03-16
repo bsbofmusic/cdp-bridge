@@ -1,18 +1,81 @@
 body {
   margin: 0;
-  font-family: "Segoe UI", sans-serif;
-  background: #0f172a;
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
   color: #e2e8f0;
 }
 
-main {
-  padding: 16px;
+.app-shell {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.hero-card,
+.panel {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 22px 40px rgba(2, 6, 23, 0.32);
+}
+
+.hero-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.35), transparent 32%), rgba(15, 23, 42, 0.96);
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  color: #93c5fd;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 30px;
+}
+
+#hero-subtitle {
+  margin: 0;
+  color: #cbd5e1;
+  max-width: 520px;
+}
+
+.hero-actions {
+  min-width: 250px;
+  display: grid;
+  gap: 10px;
+}
+
+.select-wrap,
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  font-size: 13px;
+}
+
+select {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
 }
 
 .feedback {
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
   background: #172554;
   color: #dbeafe;
 }
@@ -22,44 +85,53 @@ main {
   color: #fee2e2;
 }
 
-header {
+.content-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+}
+
+.panel {
+  padding: 18px;
+}
+
+.panel-header {
+  margin-bottom: 12px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.status-panel,
+.diagnostics-panel {
+  grid-column: 1;
+}
+
+.actions-panel,
+.maintenance-panel {
+  grid-column: 2;
+}
+
+.status-hero {
   display: flex;
   justify-content: space-between;
-  align-items: start;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.header-toggles {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-h1 {
-  margin: 0 0 6px;
-  font-size: 24px;
-}
-
-p {
-  margin: 0;
-  color: #94a3b8;
-}
-
-.toggle {
-  display: flex;
-  gap: 8px;
   align-items: center;
-  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.status-value {
+  font-size: 14px;
+  color: #cbd5e1;
 }
 
 .status-pill {
   display: inline-flex;
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 12px;
   text-transform: uppercase;
-  margin-bottom: 12px;
 }
 
 .status-running {
@@ -82,48 +154,86 @@ p {
   background: #334155;
 }
 
-.status-grid,
-.diagnostics {
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-card,
+.diagnostics div,
+.maintenance-copy {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.metric-card {
   display: grid;
   gap: 8px;
 }
 
-.status-grid div,
-.diagnostics div {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 8px;
-  padding: 10px;
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+.metric-card strong,
+.diagnostics strong {
+  color: #93c5fd;
+}
+
+.metric-card span,
+.diagnostics span {
+  word-break: break-all;
 }
 
 .button-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 16px 0;
+  gap: 10px;
 }
 
 button {
   border: 0;
-  border-radius: 8px;
-  background: #2563eb;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
   color: white;
-  padding: 10px 12px;
+  padding: 12px 14px;
   cursor: pointer;
+  font-weight: 600;
 }
 
 button:hover {
-  background: #1d4ed8;
+  filter: brightness(1.06);
 }
 
-strong {
-  color: #93c5fd;
+.diagnostics {
+  display: grid;
+  gap: 10px;
 }
 
-span {
-  text-align: right;
-  word-break: break-all;
+.diagnostics div {
+  display: grid;
+  gap: 6px;
+}
+
+.maintenance-copy {
+  color: #cbd5e1;
+  margin-bottom: 12px;
+}
+
+.maintenance-actions {
+  display: grid;
+}
+
+@media (max-width: 920px) {
+  .hero-card,
+  .content-grid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .status-panel,
+  .diagnostics-panel,
+  .actions-panel,
+  .maintenance-panel {
+    grid-column: auto;
+  }
 }

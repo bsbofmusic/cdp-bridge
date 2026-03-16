@@ -68,6 +68,7 @@ export function createBridgeService() {
       token: currentConfig.token,
       launchOnLogin: currentConfig.launchOnLogin,
       minimizeToTray: currentConfig.minimizeToTray,
+      language: currentConfig.language,
       logDir: currentConfig.logDir,
       wsEndpoint: `ws://${baseHost}:${currentConfig.bridgePort}/devtools/browser?token=${currentConfig.token}`,
       versionEndpoint: `http://${baseHost}:${currentConfig.bridgePort}/json/version?token=${currentConfig.token}`

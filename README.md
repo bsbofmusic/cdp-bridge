@@ -8,6 +8,7 @@ Maintained by `bsbofmusic`.
 - 自动检测 `Tailscale` 状态并生成可用 endpoint
 - 维护本地 CDP WebSocket / HTTP bridge
 - 提供一键桥接、一键修复、token 轮换、开机启动
+- 提供中英切换、OpenClaw Prompt 复制、正规卸载入口
 - 给远端 `OpenClaw` / 其他 CDP 客户端提供可直连地址
 
 ## 使用
@@ -55,6 +56,7 @@ npm run dist:win
 - 安装完成后自动启动
 - 应用内支持开机启动开关
 - 安装器提供 `Clean install` 选项，用于清理开发版残留和旧托盘冲突
+- 安装版提供正式窗口/任务栏图标
 
 ## 清洁安装
 
@@ -88,8 +90,10 @@ clean-install.cmd
 - 一键复制给 OpenClaw 的完整配置 prompt
 - 一键轮换 token
 - 打开配置与日志目录
+- 打开卸载程序
 - 开机启动开关
 - 最小化到托盘开关
+- 中英切换
 
 ## 当前范围
 

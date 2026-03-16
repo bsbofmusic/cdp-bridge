@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';" />
@@ -8,27 +8,68 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main>
-      <header>
+    <main class="app-shell">
+      <section class="hero-card">
         <div>
-          <h1>CDP Bridge</h1>
-          <p>本地浏览器通过 Tailscale 暴露给远端 OpenClaw。</p>
+          <p class="eyebrow" id="hero-eyebrow">Windows Local Browser Bridge</p>
+          <h1 id="hero-title">CDP Bridge</h1>
+          <p id="hero-subtitle">本地浏览器通过 Tailscale 暴露给远端 OpenClaw。</p>
         </div>
-        <div class="header-toggles">
-          <label class="toggle">
-            <input type="checkbox" data-setting="launchOnLogin" title="Start CDP Bridge automatically when you sign into Windows." />
-            <span>Launch on login</span>
+        <div class="hero-actions">
+          <label class="select-wrap" title="Switch the whole window between Chinese and English.">
+            <span id="language-label">Language</span>
+            <select id="language-select" data-setting="language">
+              <option value="zh-CN">简体中文</option>
+              <option value="en-US">English</option>
+            </select>
           </label>
-          <label class="toggle">
-            <input type="checkbox" data-setting="minimizeToTray" title="Hide the app to the system tray when you minimize or close the window." />
-            <span>Minimize to tray</span>
+          <label class="toggle" title="Start CDP Bridge automatically when you sign into Windows.">
+            <input type="checkbox" data-setting="launchOnLogin" />
+            <span id="launch-on-login-label">Launch on login</span>
+          </label>
+          <label class="toggle" title="Hide the app to the system tray when you minimize or close the window.">
+            <input type="checkbox" data-setting="minimizeToTray" />
+            <span id="minimize-to-tray-label">Minimize to tray</span>
           </label>
         </div>
-      </header>
+      </section>
+
       <section id="feedback" class="feedback">正在连接本地桥接服务…</section>
-      <section id="status"></section>
-      <section id="actions" class="button-grid"></section>
-      <section id="diagnostics" class="diagnostics"></section>
+
+      <section class="content-grid">
+        <section class="panel status-panel">
+          <div class="panel-header">
+            <h2 id="status-panel-title">Bridge Status</h2>
+          </div>
+          <div id="status"></div>
+        </section>
+
+        <section class="panel actions-panel">
+          <div class="panel-header">
+            <h2 id="actions-panel-title">Quick Actions</h2>
+          </div>
+          <div id="actions" class="button-grid"></div>
+        </section>
+
+        <section class="panel diagnostics-panel">
+          <div class="panel-header">
+            <h2 id="diagnostics-panel-title">Diagnostics</h2>
+          </div>
+          <div id="diagnostics" class="diagnostics"></div>
+        </section>
+
+        <section class="panel maintenance-panel">
+          <div class="panel-header">
+            <h2 id="maintenance-panel-title">Maintenance</h2>
+          </div>
+          <div class="maintenance-copy" id="maintenance-copy">
+            这里可以处理卸载、清洁安装和版本切换等操作。
+          </div>
+          <div class="maintenance-actions">
+            <button data-action="open-uninstaller" id="open-uninstaller-button" title="Open the installed uninstaller so the app can be removed cleanly.">Open Uninstaller</button>
+          </div>
+        </section>
+      </section>
     </main>
     <script src="./renderer.js"></script>
   </body>
