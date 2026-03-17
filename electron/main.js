@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron';
+import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron';
 
 import { getConfigPath } from '../src/config.js';
 import { createBridgeSupervisor } from '../src/supervisor.js';
@@ -32,8 +32,6 @@ const translations = {
     minimizeToTray: '最小化到托盘',
     quit: '退出',
     uninstallMissing: '未找到卸载程序。',
-    startupNoticeTitle: '启动提示',
-    startupNoticeBody: '启动 CDP 需要立即重启当前浏览器。点击“确定”后，程序会尝试结束现有浏览器并重新拉起受管会话。',
     promptIntro: '不要再尝试连接 Windows 上的原始 Chrome CDP 端口 `9222`，也不要要求我把 `--remote-debugging-address=0.0.0.0` 暴露到公网或局域网。',
     promptUseBridge: '改为使用我本地 `cdp-bridge` 提供的 WebSocket CDP 地址。',
     promptSteps: '请按下面要求配置：',
@@ -69,8 +67,6 @@ const translations = {
     minimizeToTray: 'Minimize to tray',
     quit: 'Quit',
     uninstallMissing: 'Uninstaller not found.',
-    startupNoticeTitle: 'Startup Notice',
-    startupNoticeBody: 'Starting CDP requires an immediate browser restart. After you press OK, the app will stop the current browser and relaunch a managed session.',
     promptIntro: 'Do not try to connect to the raw Windows Chrome CDP port `9222`, and do not ask me to expose `--remote-debugging-address=0.0.0.0` to the public internet or LAN.',
     promptUseBridge: 'Use the local `cdp-bridge` WebSocket CDP endpoint instead.',
     promptSteps: 'Please configure it like this:',
@@ -353,19 +349,6 @@ async function copyOpenClawPrompt() {
   showNotification(t(snapshot.language ?? 'zh-CN', 'copiedPrompt'));
 }
 
-async function confirmBrowserRestart() {
-  const language = supervisor.getSnapshot().language ?? (app.getLocale() === 'zh-CN' ? 'zh-CN' : 'en-US');
-  await dialog.showMessageBox({
-    type: 'info',
-    buttons: ['OK'],
-    defaultId: 0,
-    title: t(language, 'startupNoticeTitle'),
-    message: t(language, 'startupNoticeTitle'),
-    detail: t(language, 'startupNoticeBody'),
-    noLink: true
-  });
-}
-
 async function copyAgentPayload(kind) {
   const snapshot = supervisor.getSnapshot();
   const payload = buildAgentPayload(kind, snapshot);
@@ -487,17 +470,14 @@ function createWindow() {
 }
 
 async function startBridge() {
-  await confirmBrowserRestart();
   return supervisor.repair();
 }
 
 async function restartBridge() {
-  await confirmBrowserRestart();
   return supervisor.repair();
 }
 
 async function reconfigureBridge(mutator, reason) {
-  await confirmBrowserRestart();
   return supervisor.reconfigure(mutator, reason);
 }
 

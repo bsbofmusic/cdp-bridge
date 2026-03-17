@@ -56,8 +56,9 @@
   - 不继承原生浏览器登录态和扩展
 
 - `高级模式`
-  - 为所选 Chrome 用户创建一个高兼容受管副本
-  - 尽量保留 Cookie、登录态、扩展本体和扩展设置
+  - 为所选 Chrome 用户创建一个独立且可持久复用的浏览器副本
+  - 默认不再重度复制原生浏览器数据
+  - 更适合在副本里自行登录账号并让浏览器自己同步插件、书签、历史等资料
   - 使用非默认 `user-data-dir`，保证 Chrome 在新版本安全策略下仍可开启 CDP
 
 #### 页面模式
@@ -82,11 +83,11 @@
 
 高级模式不是直接接管原生 Chrome 默认用户目录，而是：
 
-1. 关闭所选 Chrome 用户当前窗口
-2. 复制高价值浏览器数据到一个受管副本
-3. 用这个副本拉起支持 CDP 的浏览器
+1. 以所选 Chrome 用户名创建一个独立副本目录
+2. 用这个副本拉起支持 CDP 的浏览器
+3. 后续在这个副本里自行登录账号并持续复用
 
-这样做的原因是：新版 Chrome 不允许对默认真实用户目录稳定开启 remote debugging。
+这样做的原因是：新版 Chrome 不允许对默认真实用户目录稳定开启 remote debugging，而重度复制原生数据又太慢太重。
 
 #### 高级模式登录建议
 
@@ -94,8 +95,9 @@
 
 推荐这样理解：
 
-- 第一次进入高级模式时，它像一个“新安装但预载了你大量数据”的浏览器副本
-- 你在里面完成一次登录、二次验证、扩展授权后
+- 第一次进入高级模式时，它更像一个“干净但独立”的浏览器副本
+- 你在里面完成一次登录、二次验证后
+- 浏览器会以这个副本身份继续同步你的账号资料、插件、书签和历史记录
 - 之后不要随便重置这个副本
 - 以后再次进入高级模式，会继续复用这个已经养熟的副本
 
@@ -172,6 +174,13 @@ curl -X POST "http://100.121.130.36:39222/control/start?token=YOUR_TOKEN&mode=ad
 2. 再轮询 `/json/version?token=...`
 3. 等返回 `webSocketDebuggerUrl`
 4. 再正式连接 bridge WS 地址
+
+只要本地托盘程序常驻后台、bridge 服务仍然在线，远端 Agent 就可以按需自主拉起：
+
+- `干净模式`
+- `高级模式`
+
+也就是说，远端不必每次都等本地手动点启动。
 
 ### 远端 Agent 标准指令模板
 
@@ -305,8 +314,9 @@ Instead, it provides a safer local bridge layer:
   - does not reuse your existing logins or extensions
 
 - `Advanced Mode`
-  - builds a high-compat managed replica of the selected Chrome user
-  - tries to retain cookies, login state, extension binaries, and extension settings
+  - creates a standalone persistent browser replica using the selected Chrome user name
+  - avoids a heavy full-data copy by default
+  - works best when you sign in directly inside the replica and let Chrome sync data by itself over time
   - uses a non-default `user-data-dir` so CDP remains available under modern Chrome security rules
 
 #### Page Mode
@@ -333,11 +343,11 @@ Advanced Mode does **not** directly attach to the default real Chrome user-data 
 
 Instead it:
 
-1. closes the selected Chrome user’s current windows
-2. copies high-value browser data into a managed replica
-3. launches Chrome with that managed replica and CDP enabled
+1. creates a standalone replica directory using the selected Chrome user name
+2. launches Chrome with that managed replica and CDP enabled
+3. lets that replica become its own long-lived browser environment
 
-This is necessary because modern Chrome versions no longer allow stable remote debugging against the default real user-data directory.
+This is necessary because modern Chrome versions no longer allow stable remote debugging against the default real user-data directory, and a full data clone is too heavy for practical startup.
 
 #### Advanced Mode Login Guidance
 
@@ -345,8 +355,9 @@ The Advanced replica is designed to be **persistent**.
 
 The best mental model is:
 
-- the first time you enter Advanced Mode, it behaves like a “fresh browser clone preloaded with a lot of your data”
-- once you complete a login, second-factor check, or extension authorization inside that replica
+- the first time you enter Advanced Mode, it behaves like a clean but independent browser replica
+- once you complete a login or second-factor check inside that replica
+- Chrome can continue syncing bookmarks, extensions, and other account data into that replica
 - keep reusing the same replica
 - do not reset it unless you intentionally want to rebuild from scratch
 
@@ -422,6 +433,13 @@ Recommended remote flow:
 2. poll `/json/version?token=...`
 3. wait until `webSocketDebuggerUrl` is returned
 4. then start the real CDP / Playwright session
+
+As long as the local tray app stays alive in the background and the bridge service is still online, a remote agent can choose and start either:
+
+- `Clean Mode`
+- `Advanced Mode`
+
+That means the remote side no longer has to wait for a manual local browser start every time.
 
 ### Standard Remote Agent Prompt Logic
 

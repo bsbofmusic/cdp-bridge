@@ -82,10 +82,7 @@ const strings = {
     trayEnabled: '已开启最小化到托盘。',
     trayDisabled: '已关闭最小化到托盘。',
     progressStages: {
-      'preparing-replica': '正在准备高级模式副本',
-      'copying-browser-root': '正在复制浏览器根数据与扩展本体',
-      'copying-login-state': '正在复制登录态、Cookie 与扩展设置',
-      'validating-replica': '正在验证高级模式副本',
+      'preparing-replica': '正在创建高级模式独立副本',
       'replica-ready': '高级模式副本已就绪',
       starting: '正在启动 bridge',
       restarting: '正在重新桥接',
@@ -116,14 +113,16 @@ const strings = {
 
     handoffSummary: '优先把“通用 Agent Prompt”发给 Agent，它会按背景、目标和步骤去连接本地 Chrome bridge。',
     developerSummary: '这里是给熟悉 CDP / Playwright 的开发者用的调试入口，也可以手动重置高级模式副本。',
+    developerModes: '干净模式：隔离、稳定、即开即用。高级模式：独立副本、可长期复用，适合在副本里登录并持续同步账号资料。',
+    developerMaintainer: '开发者：bsbofmusic',
     maintenanceCopy: '这里可以处理卸载、清洁重装和版本切换等操作。',
     cleanMode: '干净模式',
     advancedMode: '高级模式',
     desktopMode: '电脑模式',
     mobileMode: '手机模式',
     cleanModeHint: '稳定优先，不继承登录态和扩展。',
-    advancedModeHint: '创建高兼容受管副本，尽量保留登录态、Cookie 和扩展，同时保持 CDP 可用。',
-    advancedProfileHint: '高级模式会先关闭该 Chrome 用户，再复制关键登录态、扩展本体和扩展设置到受管副本。',
+    advancedModeHint: '创建一个独立且可持久复用的浏览器副本，后续可在这个副本里自行登录并同步账号数据。',
+    advancedProfileHint: '高级模式会按所选 Chrome 用户名创建一个独立副本目录，但不会再重度复制原生浏览器数据。',
     desktopModeHint: '桌面网页布局（横屏 1920×1080）。',
     mobileModeHint: '移动网页布局（竖屏 1080×1920）。',
     buttonHints: {
@@ -204,10 +203,7 @@ const strings = {
     trayEnabled: 'Minimize to tray enabled.',
     trayDisabled: 'Minimize to tray disabled.',
     progressStages: {
-      'preparing-replica': 'Preparing Advanced Mode replica',
-      'copying-browser-root': 'Copying browser root data and extension binaries',
-      'copying-login-state': 'Copying login state, cookies, and extension settings',
-      'validating-replica': 'Validating Advanced Mode replica',
+      'preparing-replica': 'Creating the standalone Advanced Mode replica',
       'replica-ready': 'Advanced Mode replica is ready',
       starting: 'Starting bridge',
       restarting: 'Reconnecting bridge',
@@ -238,14 +234,16 @@ const strings = {
 
     handoffSummary: 'Start by sending the generic agent prompt. It explains the background, goal, and exact bridge connection steps.',
     developerSummary: 'These entries are for developers who already understand CDP / Playwright, and for manually resetting the Advanced Mode replica.',
+    developerModes: 'Clean Mode is isolated, stable, and fast to launch. Advanced Mode keeps a standalone persistent replica that you can sign into and reuse over time.',
+    developerMaintainer: 'Maintained by bsbofmusic',
     maintenanceCopy: 'Use these controls for uninstall, clean reinstall recovery, and version handoff tasks.',
     cleanMode: 'Clean Mode',
     advancedMode: 'Advanced Mode',
     desktopMode: 'Desktop Mode',
     mobileMode: 'Mobile Mode',
     cleanModeHint: 'Best for stability. Does not reuse your existing logins or extensions.',
-    advancedModeHint: 'Builds a high-compat managed replica to retain logins, cookies, and extensions while keeping CDP available.',
-    advancedProfileHint: 'Advanced Mode closes the selected Chrome user first, then copies key login state, extension binaries, and extension settings into a managed replica.',
+    advancedModeHint: 'Creates a standalone persistent browser replica that you can log into and keep using over time.',
+    advancedProfileHint: 'Advanced Mode creates an independent replica directory using the selected Chrome user name, without performing a heavy copy of the native browser data.',
     desktopModeHint: 'Desktop page layout (landscape 1920×1080).',
     mobileModeHint: 'Mobile page layout (portrait 1080×1920).',
     buttonHints: {
@@ -343,6 +341,8 @@ function renderStaticSections(language) {
     <button data-action="copy-raw-cdp" title="${strings[language].buttonHints.raw}">${text('copyRaw', language)}</button>
     <button data-action="reset-advanced-replica" title="${strings[language].buttonHints.resetAdvancedReplica}">${text('resetAdvancedReplica', language)}</button>
     <div class="handoff-copy">${text('developerSummary', language)}</div>
+    <div class="handoff-copy">${text('developerModes', language)}</div>
+    <div class="handoff-copy">${text('developerMaintainer', language)}</div>
   `;
 }
 
