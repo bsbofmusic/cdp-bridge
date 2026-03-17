@@ -189,11 +189,13 @@ curl -X POST "http://100.121.130.36:39222/control/start?token=YOUR_TOKEN&mode=ad
 ```text
 先检查 bridge HTTP version endpoint 是否可用。
 
-如果返回 503，先调用远程启动接口：
+如果已经返回 Browser 和 webSocketDebuggerUrl，就直接连接。
+
+如果返回 503，或者提示本地 CDP 未就绪：
 - 需要干净模式时，调用 /control/start?mode=clean
 - 需要高级模式时，调用 /control/start?mode=advanced&profile=Default
 
-启动成功后，继续轮询 /json/version?token=...
+远程启动后，继续轮询 /json/version?token=...
 只有在拿到 webSocketDebuggerUrl 后，才开始真正执行 CDP / Playwright 操作。
 ```
 
@@ -448,11 +450,13 @@ If you want the remote agent to decide and start the browser by itself, use this
 ```text
 Check the bridge HTTP version endpoint first.
 
-If it returns 503, call the remote start endpoint first:
+If it already returns Browser and webSocketDebuggerUrl, connect directly.
+
+If it returns 503 or says local CDP is not ready:
 - use /control/start?mode=clean when you need Clean Mode
 - use /control/start?mode=advanced&profile=Default when you need Advanced Mode
 
-After that, keep polling /json/version?token=...
+After remote start, keep polling /json/version?token=...
 Only begin real CDP / Playwright actions after webSocketDebuggerUrl is available.
 ```
 
