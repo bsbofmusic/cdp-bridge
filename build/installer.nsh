@@ -16,13 +16,13 @@
       Abort
     ${EndIf}
 
-    ${NSD_CreateLabel} 0 0 100% 22u "Optional clean install"
+    ${NSD_CreateLabel} 0 0 100% 22u "Optional clean reinstall"
     Pop $0
 
-    ${NSD_CreateLabel} 0 18u 100% 28u "Use this if you previously ran the dev build or still see the old window after reinstalling. It removes leftover dev files and stale tray conflicts without deleting your main installed profile."
+    ${NSD_CreateLabel} 0 18u 100% 40u "Use this if an older installed build still behaves strangely, stale tray processes keep hijacking the app, or previous local data keeps surviving reinstalls. The installer will first discover and uninstall older installed versions from Windows uninstall entries, then remove leftover app data, shortcuts, updater state, and leftover install directories as a fallback."
     Pop $0
 
-    ${NSD_CreateCheckbox} 0 54u 100% 12u "Clean previous local/dev leftovers before completing installation"
+    ${NSD_CreateCheckbox} 0 60u 100% 12u "Clean reinstall: remove old installed/dev leftovers before completing installation"
     Pop $CleanInstallCheckbox
     ${NSD_SetState} $CleanInstallCheckbox ${BST_UNCHECKED}
 
@@ -31,11 +31,16 @@
 
   Function CleanInstallPageLeave
     ${NSD_GetState} $CleanInstallCheckbox $CleanInstallRequested
+    ${If} $CleanInstallRequested == ${BST_CHECKED}
+      InitPluginsDir
+      File /oname=$PLUGINSDIR\clean-install.ps1 "${PROJECT_DIR}\scripts\clean-install.ps1"
+      Banner::show /NOUNLOAD "Clean reinstall in progress" "Removing old versions, runtime data, and stale processes before installation..."
+      nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File "$PLUGINSDIR\clean-install.ps1"'
+      Pop $0
+      Banner::destroy
+    ${EndIf}
   FunctionEnd
 
   !macro customInstall
-    ${If} $CleanInstallRequested == ${BST_CHECKED}
-      nsExec::ExecToLog '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -ExecutionPolicy Bypass -File "$INSTDIR\scripts\clean-install.ps1"'
-    ${EndIf}
   !macroend
 !endif

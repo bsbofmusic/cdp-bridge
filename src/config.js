@@ -21,12 +21,31 @@ function createDefaultConfig() {
     launchOnLogin: false,
     minimizeToTray: true,
     language: 'zh-CN',
+    browserMode: 'clean',
+    deviceMode: 'desktop',
+    advancedChromeUserDataDir: path.join(process.env.LOCALAPPDATA || os.homedir(), 'Google', 'Chrome', 'User Data'),
+    advancedProfileDirectory: 'Default',
     bindHost: '0.0.0.0',
-    autoRepair: true,
-    healthCheckIntervalMs: 15000,
+    autoRepair: false,
+    healthCheckIntervalMs: 1000,
     chromeUserDataDir: path.join(appDir, 'chrome-profile'),
     logDir: path.join(appDir, 'logs')
   };
+}
+
+function migrateConfig(parsed) {
+  const merged = { ...createDefaultConfig(), ...parsed };
+
+  if (!parsed?.healthCheckIntervalMs || parsed.healthCheckIntervalMs === 15000) {
+    merged.healthCheckIntervalMs = 1000;
+  }
+
+  if (merged.browserMode === 'local-user') {
+    merged.browserMode = 'advanced';
+  }
+
+  merged.autoRepair = false;
+  return merged;
 }
 
 export function loadConfig() {
@@ -40,15 +59,14 @@ export function loadConfig() {
 
   const raw = fs.readFileSync(configPath, 'utf8');
   const parsed = JSON.parse(raw);
-  const merged = { ...createDefaultConfig(), ...parsed };
-  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2));
-  return merged;
+  return migrateConfig(parsed);
 }
 
 export function saveConfig(config) {
   ensureDir();
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  return config;
+  const normalized = migrateConfig(config);
+  fs.writeFileSync(configPath, JSON.stringify(normalized, null, 2));
+  return normalized;
 }
 
 export function updateConfig(mutator) {

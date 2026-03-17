@@ -14,7 +14,7 @@
         <div class="hero-text">
           <p class="eyebrow" id="hero-eyebrow">Windows Local Browser Bridge</p>
           <h1 id="hero-title">CDP Bridge</h1>
-          <p id="hero-subtitle">本地浏览器通过 Tailscale 暴露给远端 OpenClaw。</p>
+          <p id="hero-subtitle">本地浏览器通过 Tailscale 暴露给远端 Agent。</p>
         </div>
         <div class="hero-actions">
           <label class="select-wrap" title="Switch the whole window between Chinese and English.">
@@ -23,6 +23,24 @@
               <option value="zh-CN">简体中文</option>
               <option value="en-US">English</option>
             </select>
+          </label>
+          <label class="select-wrap" title="选择浏览器模式。干净模式更稳定，高级模式会创建一个高兼容受管副本来尽量保留登录态和扩展。">
+            <span id="browser-mode-label">浏览器模式</span>
+            <select id="browser-mode-select" data-setting="browserMode">
+              <option value="clean">干净模式</option>
+              <option value="advanced">高级模式</option>
+            </select>
+          </label>
+          <label class="select-wrap" title="选择页面按桌面布局还是手机布局打开。">
+            <span id="device-mode-label">页面模式</span>
+            <select id="device-mode-select" data-setting="deviceMode">
+              <option value="desktop">电脑模式</option>
+              <option value="mobile">手机模式</option>
+            </select>
+          </label>
+          <label class="select-wrap" id="advanced-profile-wrap" title="高级模式下可选择要复制为高兼容副本的 Chrome 用户。">
+            <span id="advanced-profile-label">Chrome 用户</span>
+            <select id="advanced-profile-select" data-setting="advancedProfileDirectory"></select>
           </label>
           <label class="toggle-wrap toggle" title="Start CDP Bridge automatically when you sign into Windows.">
             <span id="launch-on-login-label">Launch on login</span>
@@ -35,7 +53,16 @@
         </div>
       </section>
 
-      <section id="feedback" class="feedback glass-panel">正在连接本地桥接服务…</section>
+      <section id="feedback" class="feedback glass-panel">
+        <div id="feedback-message">正在连接本地桥接服务…</div>
+        <div id="progress-root" class="progress-root" hidden>
+          <div class="progress-copy">
+            <strong id="progress-title">当前进度</strong>
+            <span id="progress-detail">等待下一步操作</span>
+          </div>
+          <div class="progress-track"><div id="progress-bar" class="progress-bar"></div></div>
+        </div>
+      </section>
 
       <!-- 双栏布局区域 -->
       <section class="content-grid">
@@ -85,11 +112,11 @@
               <h2 id="maintenance-panel-title">Maintenance</h2>
             </div>
             <div class="maintenance-copy" id="maintenance-copy">
-              这里可以处理卸载、清洁安装和版本切换等操作。
+              这里可以处理卸载、清洁重装和版本切换等操作。
             </div>
             <div class="maintenance-actions button-grid">
               <button data-action="open-uninstaller" id="open-uninstaller-button" title="Open the installed uninstaller so the app can be removed cleanly.">Open Uninstaller</button>
-              <button data-action="copy-clean-install-guide" id="clean-install-guide-button" title="Copy a short explanation of when and why to use Clean install.">Copy Clean Install Guide</button>
+              <button data-action="copy-clean-install-guide" id="clean-install-guide-button" title="Copy a short explanation of when and why to use Clean reinstall.">Copy Clean Reinstall Guide</button>
             </div>
           </section>
         </div>
