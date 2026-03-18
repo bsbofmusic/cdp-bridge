@@ -35,6 +35,7 @@ const strings = {
     maintenanceCopy: '这里可以处理卸载、清洁重装和版本切换等操作。',
     openUninstaller: '打开卸载程序',
     cleanInstallGuide: '复制清洁重装说明',
+    openDataDir: '打开绿色版数据目录',
     browserAutoHeal: '浏览器自愈',
     browser: '浏览器',
     mode: '当前模式',
@@ -156,6 +157,7 @@ const strings = {
     maintenanceCopy: 'Use these controls for uninstall, clean reinstall recovery, and version handoff tasks.',
     openUninstaller: 'Open Uninstaller',
     cleanInstallGuide: 'Copy Clean Reinstall Guide',
+    openDataDir: 'Open Portable Data Folder',
     browserAutoHeal: 'Browser Self-Heal',
     browser: 'Browser',
     mode: 'Current Mode',
@@ -364,6 +366,8 @@ function renderFrame(language) {
   document.getElementById('diagnostics-panel-title').textContent = text('diagnosticsTitle', language);
   document.getElementById('maintenance-panel-title').textContent = text('maintenanceTitle', language);
   document.getElementById('maintenance-copy').textContent = text('maintenanceCopy', language);
+  document.getElementById('open-data-dir-button').textContent = text('openDataDir', language);
+  document.getElementById('open-data-dir-button').title = text('openDataDir', language);
   document.getElementById('open-uninstaller-button').textContent = text('openUninstaller', language);
   document.getElementById('open-uninstaller-button').title = strings[language].buttonHints.uninstall;
   document.getElementById('clean-install-guide-button').textContent = text('cleanInstallGuide', language);
@@ -450,14 +454,17 @@ function render(state) {
     <div><strong>${text('installPath', language)}</strong><span>${state.installPath ?? text('unavailable', language)}</span></div>
     <div><strong>${text('mode', language)}</strong><span>${browserModeSummary} / ${deviceModeSummary}</span></div>
     <div><strong>${text('advancedReplica', language)}</strong><span>${state.advancedReplicaState?.status ?? text('none', language)}${state.advancedReplicaState?.lastError ? ` · ${state.advancedReplicaState.lastError}` : ''}</span></div>
+    <div><strong>Replica Root</strong><span>${state.advancedReplicaRootDir ?? text('none', language)}</span></div>
     <div><strong>${text('config', language)}</strong><span>${state.configPath ?? state.appDir}</span></div>
     <div><strong>${text('userData', language)}</strong><span>${state.userDataPath ?? state.appDir}</span></div>
     <div><strong>${text('logs', language)}</strong><span>${state.logDir}</span></div>
+    <div><strong>Mode</strong><span>${state.portableMode ? 'Portable 0.2.2' : 'Installed / Dev'}</span></div>
     <div><strong>${text('lastError', language)}</strong><span>${state.lastError ?? text('none', language)}</span></div>
   `;
 
   document.querySelector('[data-setting="launchOnLogin"]').checked = Boolean(state.launchOnLogin);
   document.querySelector('[data-setting="minimizeToTray"]').checked = Boolean(state.minimizeToTray);
+  document.getElementById('open-uninstaller-button').style.display = state.portableMode ? 'none' : '';
 }
 
 async function boot() {
@@ -509,6 +516,10 @@ document.addEventListener('click', async (event) => {
   }
   if (action === 'open-uninstaller') {
     await window.bridgeApp.invoke('bridge:open-uninstaller');
+    return;
+  }
+  if (action === 'open-data-dir') {
+    await window.bridgeApp.invoke('bridge:open-data-dir');
     return;
   }
   if (action === 'copy-clean-install-guide') {

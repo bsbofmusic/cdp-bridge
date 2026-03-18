@@ -71,7 +71,7 @@ export function createBridgeService() {
 
     await stopManagedBrowsers(currentConfig);
 
-    let advancedLaunchContext = advancedProfileManager.getLaunchContext(currentConfig);
+    let advancedLaunchContext = await advancedProfileManager.getLaunchContext(currentConfig) ?? await advancedProfileManager.discoverAndAttachReplica(currentConfig);
     if (currentConfig.browserMode === 'advanced' && !advancedLaunchContext) {
       advancedLaunchContext = await advancedProfileManager.ensureReplica(currentConfig, null);
     }
@@ -89,8 +89,8 @@ export function createBridgeService() {
       getTailscaleStatus(),
       isChromeReachable(currentConfig.chromeDebugPort)
     ]);
-    const advancedReplicaState = advancedProfileManager.getProfileState(currentConfig);
-    const modeMeta = getBrowserModeMeta(currentConfig, advancedProfileManager.getLaunchContext(currentConfig));
+    const advancedReplicaState = await advancedProfileManager.getProfileState(currentConfig);
+    const modeMeta = getBrowserModeMeta(currentConfig, await advancedProfileManager.getLaunchContext(currentConfig));
 
     const baseHost = tailscale.tailscaleIp ?? '127.0.0.1';
     const snapshot = {
@@ -103,6 +103,7 @@ export function createBridgeService() {
       installedBrowsers,
       availableProfiles,
       advancedProfileDirectory: currentConfig.advancedProfileDirectory,
+      advancedReplicaRootDir: currentConfig.advancedReplicaRootDir,
       advancedReplicaState,
       tailscale,
       token: currentConfig.token,
@@ -140,8 +141,11 @@ export function createBridgeService() {
 
       currentConfig = await reserveBridgePort(loadConfig());
       await ensureServerStarted();
-      let advancedLaunchContext = advancedProfileManager.getLaunchContext(currentConfig);
+      let advancedLaunchContext = await advancedProfileManager.getLaunchContext(currentConfig);
       if (currentConfig.browserMode === 'advanced') {
+        if (!advancedLaunchContext) {
+          advancedLaunchContext = await advancedProfileManager.discoverAndAttachReplica(currentConfig);
+        }
         if (!advancedLaunchContext) {
           onProgress?.({ stage: 'preparing-replica', percent: 4, detail: currentConfig.advancedProfileDirectory || 'Default' });
           await stopManagedBrowsers(currentConfig);
@@ -196,11 +200,26 @@ export function createBridgeService() {
       currentConfig = saveConfig(mutator(loadConfig()));
       return currentConfig;
     },
+    async prepareAdvancedReplica(options = {}) {
+      currentConfig = loadConfig();
+      if (currentConfig.browserMode !== 'advanced') {
+        return buildSnapshot();
+      }
+      const onProgress = options.onProgress;
+      let advancedLaunchContext = await advancedProfileManager.getLaunchContext(currentConfig);
+      if (!advancedLaunchContext) {
+        advancedLaunchContext = await advancedProfileManager.discoverAndAttachReplica(currentConfig);
+      }
+      if (!advancedLaunchContext) {
+        advancedLaunchContext = await advancedProfileManager.ensureReplica(currentConfig, onProgress);
+      }
+      return buildSnapshot();
+    },
     async resetAdvancedReplica() {
       currentConfig = loadConfig();
       await stopManagedBrowsers(currentConfig);
       await this.stop();
-      advancedProfileManager.invalidateReplica(currentConfig);
+      await advancedProfileManager.invalidateReplica(currentConfig);
       await ensureServerStarted();
       return buildSnapshot();
     }

@@ -1,6 +1,6 @@
 {
   "name": "cdp-bridge",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "type": "module",
   "description": "Tailscale CDP bridge for remote browser agents on Windows",
@@ -13,8 +13,9 @@
     "start": "electron .",
     "start:bridge": "node src/cli.js",
     "check": "node --check src/cli.js && node --check src/server.js && node --check src/chrome.js && node --check src/config.js && node --check src/tailscale.js && node --check src/logger.js && node --check src/bridge-service.js && node --check src/supervisor.js && node --check electron/main.js && node --check electron/preload.cjs && node --check electron/renderer.js",
-    "pack:win": "electron-builder --dir --win nsis --x64",
-    "dist:win": "electron-builder --win nsis --x64"
+    "pack:win": "electron-builder --dir --win portable --x64",
+    "dist:win": "electron-builder --win portable --x64",
+    "dist:portable": "electron-builder --win portable --x64"
   },
   "dependencies": {
     "ws": "^8.18.3"
@@ -42,12 +43,12 @@
     "extraMetadata": {
       "main": "electron/main.js"
     },
-    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "artifactName": "${productName}-Portable-${version}.${ext}",
     "win": {
       "icon": "electron/assets/app-icon.ico",
       "target": [
         {
-          "target": "nsis",
+          "target": "portable",
           "arch": [
             "x64"
           ]
@@ -55,22 +56,9 @@
       ],
       "signAndEditExecutable": false
     },
-    "nsis": {
-      "include": "build/installer.nsh",
-      "installerIcon": "electron/assets/app-icon.ico",
-      "uninstallerIcon": "electron/assets/app-icon.ico",
-      "installerHeaderIcon": "electron/assets/app-icon.ico",
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "allowElevation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "runAfterFinish": true,
-      "shortcutName": "CDP Bridge",
-      "installerLanguages": [
-        "en_US",
-        "zh_CN"
-      ]
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}",
+      "useZip": true
     }
   }
 }

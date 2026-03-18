@@ -1,10 +1,11 @@
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow, clipboard, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeImage, Notification, shell, Tray } from 'electron';
 
-import { getConfigPath } from '../src/config.js';
+import { getAppDir, getConfigPath, isPortableMode } from '../src/config.js';
 import { createBridgeSupervisor } from '../src/supervisor.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,6 +15,7 @@ const windowIconPath = path.join(__dirname, 'assets', 'app-icon.png');
 const trayIconPath = path.join(__dirname, 'assets', 'app-icon.ico');
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
 const packageMetadata = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+const portableMode = isPortableMode();
 
 const translations = {
   'zh-CN': {
@@ -49,7 +51,12 @@ const translations = {
     copiedRaw: '已复制原始 CDP 地址。',
     resetReplicaDone: '已重置高级模式副本。下次启动高级模式时会重新创建。',
     copyPlaywright: '复制 Playwright 代码',
-    copyRaw: '复制原始 CDP 地址'
+    copyRaw: '复制原始 CDP 地址',
+    openDataDir: '打开绿色版数据目录',
+    portableConflictTitle: '检测到已运行实例',
+    portableConflictBody: '检测到其他 CDP Bridge 实例，当前版本会自动关闭旧实例后接管运行。',
+    portableConflictDetail: '只会关闭 CDP Bridge 自己的旧实例，不会关闭你正常使用的浏览器。',
+    portableModeBadge: '绿色版运行中'
   },
   'en-US': {
     appName: 'CDP Bridge',
@@ -84,7 +91,12 @@ const translations = {
     copiedRaw: 'Raw CDP URL copied.',
     resetReplicaDone: 'Advanced Mode replica reset. It will be recreated next time you start Advanced Mode.',
     copyPlaywright: 'Copy Playwright Snippet',
-    copyRaw: 'Copy Raw CDP URL'
+    copyRaw: 'Copy Raw CDP URL',
+    openDataDir: 'Open portable data directory',
+    portableConflictTitle: 'Another instance is already running',
+    portableConflictBody: 'Another CDP Bridge instance was detected. The current build will automatically close the older instance and take over.',
+    portableConflictDetail: 'Only CDP Bridge instances are terminated. Your normal browser windows are not touched.',
+    portableModeBadge: 'Portable mode active'
   }
 };
 
@@ -92,7 +104,9 @@ function t(language, key) {
   return translations[language]?.[key] ?? translations['zh-CN'][key];
 }
 
-if (isDevBuild) {
+if (portableMode) {
+  app.setPath('userData', getAppDir());
+} else if (isDevBuild) {
   app.setPath('userData', path.join(app.getPath('appData'), 'cdp-bridge-dev'));
 }
 
@@ -251,7 +265,9 @@ function enhanceSnapshot(snapshot) {
     installPath: process.execPath,
     configPath: getConfigPath(),
     isPackaged: app.isPackaged,
-    userDataPath: app.getPath('userData')
+    userDataPath: app.getPath('userData'),
+    appDir: getAppDir(),
+    portableMode
   };
 }
 
@@ -324,6 +340,10 @@ async function copyAgentPayload(kind) {
 }
 
 function openUninstaller() {
+  if (portableMode) {
+    showNotification(supervisor.getSnapshot().language === 'en-US' ? 'Portable build has no uninstaller.' : '绿色版没有卸载程序。');
+    return;
+  }
   const uninstallPath = path.join(path.dirname(process.execPath), 'Uninstall CDP Bridge.exe');
   if (!app.isPackaged) {
     showNotification('开发模式下没有卸载程序。');
@@ -335,6 +355,28 @@ function openUninstaller() {
       showNotification(t(supervisor.getSnapshot().language ?? 'zh-CN', 'uninstallMissing'));
     }
   });
+}
+
+function openDataDir() {
+  void shell.openPath(getAppDir());
+}
+
+function stopOtherBridgeInstances() {
+  try {
+    execFileSync('powershell.exe', ['-NoProfile', '-Command', [
+      "$currentPid = " + process.pid,
+      "Get-CimInstance Win32_Process | Where-Object {",
+      "  $_.ProcessId -ne $currentPid -and (",
+      "    $_.Name -like 'CDP Bridge*.exe' -or",
+      "    ($_.ExecutablePath -and $_.ExecutablePath -like '*CDP Bridge*.exe') -or",
+      "    ($_.CommandLine -and $_.CommandLine -like '*cdp-bridge*')",
+      '  )',
+      '} | ForEach-Object {',
+      "  Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue",
+      '}'
+    ].join('; ')], { windowsHide: true });
+  } catch {
+  }
 }
 
 function buildTrayMenu(snapshot) {
@@ -349,8 +391,9 @@ function buildTrayMenu(snapshot) {
     { label: t(language, 'openWindow'), click: showWindow },
     { label: t(language, 'rotateToken'), click: () => void supervisor.rotateToken() },
     { label: t(language, 'openConfig'), click: () => void shell.showItemInFolder(getConfigPath()) },
+    { label: t(language, 'openDataDir'), click: openDataDir },
     { label: t(language, 'openLogs'), click: () => void shell.openPath(snapshot.logDir ?? snapshot.appDir) },
-    { label: t(language, 'openUninstaller'), click: openUninstaller },
+    ...(!portableMode ? [{ label: t(language, 'openUninstaller'), click: openUninstaller }] : []),
     { type: 'separator' },
     {
       label: t(language, 'launchOnLogin'),
@@ -474,6 +517,9 @@ function wireIpc() {
       ...config,
       browserMode: payload.mode === 'advanced' ? 'advanced' : 'clean'
     }));
+    if (payload.mode === 'advanced') {
+      return supervisor.prepareAdvancedReplica('Browser mode switched to advanced');
+    }
     return supervisor.refresh();
   });
   ipcMain.handle('bridge:set-advanced-profile', async (_event, payload) => {
@@ -481,7 +527,7 @@ function wireIpc() {
       ...config,
       advancedProfileDirectory: payload.profile || 'Default'
     }));
-    return supervisor.refresh();
+    return supervisor.prepareAdvancedReplica('Advanced profile changed');
   });
   ipcMain.handle('bridge:set-device-mode', async (_event, payload) => {
     supervisor.updateConfig((config) => ({
@@ -491,6 +537,7 @@ function wireIpc() {
     return supervisor.refresh();
   });
   ipcMain.handle('bridge:open-uninstaller', async () => openUninstaller());
+  ipcMain.handle('bridge:open-data-dir', async () => openDataDir());
   ipcMain.handle('bridge:copy-clean-install-guide', async () => {
     const snapshot = supervisor.getSnapshot();
     clipboard.writeText(buildCleanInstallGuide(snapshot));
@@ -504,13 +551,29 @@ function wireIpc() {
 }
 
 async function bootstrap() {
-  if (!app.requestSingleInstanceLock()) {
+  if (portableMode) {
+    stopOtherBridgeInstances();
+  }
+
+  if (!app.requestSingleInstanceLock({ version: packageMetadata.version, execPath: process.execPath })) {
     app.quit();
     return;
   }
 
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory, additionalData) => {
     showWindow();
+    const snapshot = supervisor.getSnapshot();
+    const language = snapshot.language ?? 'zh-CN';
+    const detail = additionalData?.execPath && additionalData.execPath !== process.execPath
+      ? `${t(language, 'portableConflictDetail')}\n\nRunning: ${additionalData.execPath}`
+      : t(language, 'portableConflictDetail');
+    void dialog.showMessageBox(mainWindow ?? undefined, {
+      type: 'warning',
+      title: t(language, 'portableConflictTitle'),
+      message: t(language, 'portableConflictBody'),
+      detail,
+      buttons: ['OK']
+    });
   });
 
   await app.whenReady();

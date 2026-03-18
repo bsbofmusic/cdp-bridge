@@ -239,8 +239,15 @@ export function createBridgeSupervisor() {
         launchOnLogin: config.launchOnLogin,
         minimizeToTray: config.minimizeToTray,
         language: config.language,
+        advancedReplicaRootDir: config.advancedReplicaRootDir,
       });
       return config;
+    },
+    async prepareAdvancedReplica(reason = 'Preparing advanced replica') {
+      return runAction('repairing', 'prepare-advanced-replica', async (onProgress) => {
+        onProgress({ stage: 'preparing-replica', percent: 10, detail: reason });
+        return service.prepareAdvancedReplica({ onProgress });
+      }, { lastError: reason });
     },
     async resetAdvancedReplica() {
       return runAction('repairing', 'reset-advanced-replica', async (onProgress) => {
@@ -264,6 +271,7 @@ export function createBridgeSupervisor() {
           launchOnLogin: config.launchOnLogin,
           minimizeToTray: config.minimizeToTray,
           language: config.language,
+          advancedReplicaRootDir: config.advancedReplicaRootDir,
         };
       }, { lastError: reason });
     },
