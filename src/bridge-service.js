@@ -12,6 +12,7 @@ import {
   stopManagedBrowsers
 } from './chrome.js';
 import { createAdvancedProfileManager } from './advanced-profile-manager.js';
+import { createCdpObservability } from './cdp-observability.js';
 import { loadConfig, saveConfig } from './config.js';
 import { startBridgeServer } from './server.js';
 import { getTailscaleStatus } from './tailscale.js';
@@ -49,6 +50,7 @@ export function createBridgeService() {
   let currentConfig = loadConfig();
   let serverHandle = null;
   const advancedProfileManager = createAdvancedProfileManager();
+  const observability = createCdpObservability();
 
   async function ensureServerStarted() {
     if (serverHandle) {
@@ -57,7 +59,13 @@ export function createBridgeService() {
 
     currentConfig = await reserveBridgePort(loadConfig());
     serverHandle = await startBridgeServer(currentConfig, {
-      start: async (options = {}) => activateFromRemote(options)
+      start: async (options = {}) => activateFromRemote(options),
+      openSession: (options = {}) => observability.openSession(options),
+      closeSession: (sessionId) => observability.closeSession(sessionId),
+      trackOutgoing: (sessionId, message) => observability.trackOutgoing(sessionId, message),
+      trackIncoming: (sessionId, message) => observability.trackIncoming(sessionId, message),
+      getDiagnostics: async () => observability.getDiagnostics(currentConfig),
+      closeSessionTargets: async (sessionId) => observability.closeSessionTargets(currentConfig, sessionId),
     });
   }
 
@@ -91,8 +99,13 @@ export function createBridgeService() {
     ]);
     const advancedReplicaState = await advancedProfileManager.getProfileState(currentConfig);
     const modeMeta = getBrowserModeMeta(currentConfig, await advancedProfileManager.getLaunchContext(currentConfig));
-
     const baseHost = tailscale.tailscaleIp ?? '127.0.0.1';
+    const diagnosticsBase = {
+      diagnosticsEndpoint: `http://${baseHost}:${currentConfig.bridgePort}/diagnostics?token=${currentConfig.token}`,
+      closeSessionTargetsBase: `http://${baseHost}:${currentConfig.bridgePort}/control/close-session-targets?token=${currentConfig.token}`,
+      activeAgentSessions: observability.listSessions(),
+    };
+
     const snapshot = {
       running: Boolean(serverHandle),
       bridgePort: currentConfig.bridgePort,
@@ -116,8 +129,9 @@ export function createBridgeService() {
       profileDir: modeMeta.profileDir,
       logDir: currentConfig.logDir,
       wsEndpoint: `ws://${baseHost}:${currentConfig.bridgePort}/devtools/browser?token=${currentConfig.token}`,
-      versionEndpoint: `http://${baseHost}:${currentConfig.bridgePort}/json/version?token=${currentConfig.token}`
-      ,controlStartBase: `http://${baseHost}:${currentConfig.bridgePort}/control/start?token=${currentConfig.token}`
+      versionEndpoint: `http://${baseHost}:${currentConfig.bridgePort}/json/version?token=${currentConfig.token}`,
+      controlStartBase: `http://${baseHost}:${currentConfig.bridgePort}/control/start?token=${currentConfig.token}`,
+      ...diagnosticsBase,
     };
 
     if (!chromeReachable) {

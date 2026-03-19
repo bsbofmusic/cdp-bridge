@@ -29,6 +29,13 @@ function parseControlOptions(parsedUrl) {
   };
 }
 
+function parseSessionOptions(parsedUrl) {
+  return {
+    sessionId: parsedUrl.searchParams.get('sessionId') || undefined,
+    sessionLabel: parsedUrl.searchParams.get('sessionLabel') || undefined,
+  };
+}
+
 function bridgeUnavailablePayload(config, error) {
   return {
     ok: false,
@@ -117,6 +124,44 @@ export async function startBridgeServer(config, controls = {}) {
       }
     }
 
+    if (parsed.pathname === '/diagnostics') {
+      if (!isAuthorized(request, config.token)) {
+        return json(response, 401, { ok: false, error: 'Unauthorized' });
+      }
+      if (!controls.getDiagnostics) {
+        return json(response, 501, { ok: false, error: 'Diagnostics are not available' });
+      }
+      try {
+        return json(response, 200, {
+          ok: true,
+          ...(await controls.getDiagnostics())
+        });
+      } catch (error) {
+        return json(response, 500, { ok: false, error: error.message });
+      }
+    }
+
+    if (parsed.pathname === '/control/close-session-targets') {
+      if (!isAuthorized(request, config.token)) {
+        return json(response, 401, { ok: false, error: 'Unauthorized' });
+      }
+      if (!controls.closeSessionTargets) {
+        return json(response, 501, { ok: false, error: 'Session cleanup is not available' });
+      }
+      try {
+        const sessionId = parsed.searchParams.get('sessionId');
+        if (!sessionId) {
+          return json(response, 400, { ok: false, error: 'sessionId is required' });
+        }
+        return json(response, 200, {
+          ok: true,
+          ...(await controls.closeSessionTargets(sessionId))
+        });
+      } catch (error) {
+        return json(response, 500, { ok: false, error: error.message });
+      }
+    }
+
     return json(response, 404, { ok: false, error: 'Not found' });
   });
 
@@ -134,16 +179,24 @@ export async function startBridgeServer(config, controls = {}) {
     try {
       const versionInfo = await getChromeVersion(config.chromeDebugPort);
       const upstream = new WebSocket(versionInfo.webSocketDebuggerUrl);
+      const sessionOptions = parseSessionOptions(parsed);
+      const sessionId = controls.openSession?.(sessionOptions) ?? null;
 
       upstream.once('open', () => {
         wss.handleUpgrade(request, socket, head, (client) => {
           client.on('message', (message, isBinary) => {
+            if (!isBinary && sessionId) {
+              controls.trackOutgoing?.(sessionId, message);
+            }
             if (upstream.readyState === WebSocket.OPEN) {
               upstream.send(message, { binary: isBinary });
             }
           });
 
           upstream.on('message', (message, isBinary) => {
+            if (!isBinary && sessionId) {
+              controls.trackIncoming?.(sessionId, message);
+            }
             if (client.readyState === WebSocket.OPEN) {
               client.send(message, { binary: isBinary });
             }
@@ -160,7 +213,12 @@ export async function startBridgeServer(config, controls = {}) {
 
           client.on('close', closeBoth);
           client.on('error', closeBoth);
-          upstream.on('close', closeBoth);
+          upstream.on('close', () => {
+            if (sessionId) {
+              controls.closeSession?.(sessionId);
+            }
+            closeBoth();
+          });
           upstream.on('error', closeBoth);
         });
       });

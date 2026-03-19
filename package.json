@@ -1,6 +1,6 @@
 {
   "name": "cdp-bridge",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "description": "Tailscale CDP bridge for remote browser agents on Windows",
@@ -12,7 +12,7 @@
   "scripts": {
     "start": "electron .",
     "start:bridge": "node src/cli.js",
-    "check": "node --check src/cli.js && node --check src/server.js && node --check src/chrome.js && node --check src/config.js && node --check src/tailscale.js && node --check src/logger.js && node --check src/bridge-service.js && node --check src/supervisor.js && node --check electron/main.js && node --check electron/preload.cjs && node --check electron/renderer.js",
+    "check": "node --check src/cli.js && node --check src/server.js && node --check src/chrome.js && node --check src/config.js && node --check src/tailscale.js && node --check src/logger.js && node --check src/cdp-observability.js && node --check src/bridge-service.js && node --check src/supervisor.js && node --check electron/main.js && node --check electron/preload.cjs && node --check electron/renderer.js",
     "pack:win": "electron-builder --dir --win portable --x64",
     "dist:win": "electron-builder --win portable --x64",
     "dist:portable": "electron-builder --win portable --x64"

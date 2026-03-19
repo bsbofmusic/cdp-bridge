@@ -458,7 +458,9 @@ function render(state) {
     <div><strong>${text('config', language)}</strong><span>${state.configPath ?? state.appDir}</span></div>
     <div><strong>${text('userData', language)}</strong><span>${state.userDataPath ?? state.appDir}</span></div>
     <div><strong>${text('logs', language)}</strong><span>${state.logDir}</span></div>
-    <div><strong>Mode</strong><span>${state.portableMode ? 'Portable 0.2.2' : 'Installed / Dev'}</span></div>
+    <div><strong>Mode</strong><span>${state.portableMode ? 'Portable 0.2.3' : 'Installed / Dev'}</span></div>
+    <div><strong>Diagnostics</strong><span>${state.diagnosticsEndpoint ?? text('none', language)}</span></div>
+    <div><strong>Agent Sessions</strong><span>${Array.isArray(state.activeAgentSessions) ? state.activeAgentSessions.length : 0}</span></div>
     <div><strong>${text('lastError', language)}</strong><span>${state.lastError ?? text('none', language)}</span></div>
   `;
 
