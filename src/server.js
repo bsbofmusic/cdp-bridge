@@ -7,7 +7,6 @@ import { getChromeVersion } from './chrome.js';
 import { getTailscaleStatus } from './tailscale.js';
 
 async function getBridgeMetadata(config) {
-  const versionInfo = await getChromeVersion(config.chromeDebugPort);
   const tailscale = await getTailscaleStatus();
   const tailscaleIp = tailscale.tailscaleIp;
   const baseHost = tailscaleIp ?? '127.0.0.1';
@@ -17,7 +16,21 @@ async function getBridgeMetadata(config) {
     tailscale,
     tailscaleIp,
     wsUrl,
-    versionInfo
+    versionInfo: null,
+    cdpReady: false,
+    cdpError: null
+  };
+}
+
+async function getVersionMetadata(config) {
+  const metadata = await getBridgeMetadata(config);
+  const versionInfo = await getChromeVersion(config.chromeDebugPort);
+
+  return {
+    ...metadata,
+    versionInfo,
+    cdpReady: true,
+    cdpError: null
   };
 }
 
@@ -65,23 +78,32 @@ export async function startBridgeServer(config, controls = {}) {
     }
 
     if (parsed.pathname === '/status') {
+      const metadata = await getBridgeMetadata(config);
+
       try {
-        const metadata = await getBridgeMetadata(config);
-        return json(response, 200, {
-          ok: true,
-          bridgePort: config.bridgePort,
-          chromeDebugPort: config.chromeDebugPort,
-          tailscaleIp: metadata.tailscaleIp,
-          tailscale: metadata.tailscale,
-          wsEndpoint: metadata.wsUrl,
-          browser: {
-            browser: metadata.versionInfo.Browser,
-            protocolVersion: metadata.versionInfo['Protocol-Version']
-          }
-        });
+        const versionInfo = await getChromeVersion(config.chromeDebugPort);
+        metadata.versionInfo = versionInfo;
+        metadata.cdpReady = true;
       } catch (error) {
-        return json(response, 503, bridgeUnavailablePayload(config, error));
+        metadata.cdpError = error.message;
       }
+
+      return json(response, 200, {
+        ok: true,
+        bridgePort: config.bridgePort,
+        chromeDebugPort: config.chromeDebugPort,
+        tailscaleIp: metadata.tailscaleIp,
+        tailscale: metadata.tailscale,
+        wsEndpoint: metadata.wsUrl,
+        cdpReady: metadata.cdpReady,
+        cdpError: metadata.cdpError,
+        browser: metadata.versionInfo
+          ? {
+              browser: metadata.versionInfo.Browser,
+              protocolVersion: metadata.versionInfo['Protocol-Version']
+            }
+          : null
+      });
     }
 
     if (parsed.pathname === '/json/version') {
@@ -90,7 +112,7 @@ export async function startBridgeServer(config, controls = {}) {
       }
 
       try {
-        const metadata = await getBridgeMetadata(config);
+        const metadata = await getVersionMetadata(config);
         return json(response, 200, {
           ...metadata.versionInfo,
           webSocketDebuggerUrl: metadata.wsUrl
