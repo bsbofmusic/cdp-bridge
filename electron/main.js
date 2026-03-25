@@ -50,6 +50,7 @@ const translations = {
     copiedPlaywright: '已复制 Playwright 代码片段。',
     copiedRaw: '已复制原始 CDP 地址。',
     copiedDiagnostics: '已复制诊断快照。',
+    openReleaseNotes: '查看升级日志',
     resetReplicaDone: '已重置高级模式副本。下次启动高级模式时会重新创建。',
     copyPlaywright: '复制 Playwright 代码',
     copyRaw: '复制原始 CDP 地址',
@@ -92,6 +93,7 @@ const translations = {
     copiedPlaywright: 'Playwright snippet copied.',
     copiedRaw: 'Raw CDP URL copied.',
     copiedDiagnostics: 'Diagnostics snapshot copied.',
+    openReleaseNotes: 'Open Release Notes',
     resetReplicaDone: 'Advanced Mode replica reset. It will be recreated next time you start Advanced Mode.',
     copyPlaywright: 'Copy Playwright Snippet',
     copyRaw: 'Copy Raw CDP URL',
@@ -478,6 +480,11 @@ function openDataDir() {
   void shell.openPath(getAppDir());
 }
 
+function openReleaseNotes() {
+  const version = packageMetadata.version;
+  void shell.openExternal(`https://github.com/bsbofmusic/cdp-bridge/releases/tag/v${version}`);
+}
+
 function stopOtherBridgeInstances() {
   try {
     execFileSync('powershell.exe', ['-NoProfile', '-Command', [
@@ -509,6 +516,7 @@ function buildTrayMenu(snapshot) {
     { label: t(language, 'rotateToken'), click: () => void supervisor.rotateToken() },
     { label: t(language, 'openConfig'), click: () => void shell.showItemInFolder(getConfigPath()) },
     { label: t(language, 'openDataDir'), click: openDataDir },
+    { label: t(language, 'openReleaseNotes'), click: openReleaseNotes },
     { label: t(language, 'openLogs'), click: () => void shell.openPath(snapshot.logDir ?? snapshot.appDir) },
     ...(!portableMode ? [{ label: t(language, 'openUninstaller'), click: openUninstaller }] : []),
     { type: 'separator' },
@@ -655,6 +663,7 @@ function wireIpc() {
   });
   ipcMain.handle('bridge:open-uninstaller', async () => openUninstaller());
   ipcMain.handle('bridge:open-data-dir', async () => openDataDir());
+  ipcMain.handle('bridge:open-release-notes', async () => openReleaseNotes());
   ipcMain.handle('bridge:copy-clean-install-guide', async () => {
     const snapshot = supervisor.getSnapshot();
     clipboard.writeText(buildCleanInstallGuide(snapshot));

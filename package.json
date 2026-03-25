@@ -1,6 +1,6 @@
 {
   "name": "cdp-bridge",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "private": true,
   "type": "module",
   "description": "Tailscale CDP bridge for remote browser agents on Windows",

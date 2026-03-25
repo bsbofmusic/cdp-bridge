@@ -111,6 +111,7 @@ const strings = {
     copyPlaywright: '复制 Playwright 代码',
     copyRaw: '复制开发者 CDP 地址',
     copyDiagnostics: '复制诊断快照',
+    openReleaseNotes: '查看升级日志',
     resetAdvancedReplica: '重置高级模式副本',
 
     handoffSummary: '优先把“通用 Agent Prompt”发给 Agent，它会按背景、目标和步骤去连接本地 Chrome bridge。',
@@ -137,6 +138,7 @@ const strings = {
       playwright: '复制 Playwright connectOverCDP 代码片段。',
       raw: '复制 bridge 的底层 WS 地址，适合熟悉 CDP 的开发者调试使用。',
       diagnostics: '复制当前桥接、CDP、Tailscale 与最近一次启动的诊断快照。',
+      releaseNotes: '打开当前版本对应的 GitHub Release 页面，查看升级时间和变更内容。',
       resetAdvancedReplica: '删除当前高级模式副本。下次在高级模式点击一键启动时，会重新创建一个新的副本。'
     }
   },
@@ -235,6 +237,7 @@ const strings = {
     copyPlaywright: 'Copy Playwright Snippet',
     copyRaw: 'Copy Developer CDP URL',
     copyDiagnostics: 'Copy Diagnostics Snapshot',
+    openReleaseNotes: 'Open Release Notes',
     resetAdvancedReplica: 'Reset Advanced Replica',
 
     handoffSummary: 'Start by sending the generic agent prompt. It explains the background, goal, and exact bridge connection steps.',
@@ -261,6 +264,7 @@ const strings = {
       playwright: 'Copy a Playwright connectOverCDP snippet.',
       raw: 'Copy the low-level bridge WS endpoint for CDP-capable developer tools.',
       diagnostics: 'Copy the current bridge, CDP, Tailscale, and recent launch diagnostics as one snapshot.',
+      releaseNotes: 'Open the GitHub release page for the current version to review release time and changes.',
       resetAdvancedReplica: 'Delete the current Advanced Mode replica. The next Advanced Mode start will rebuild it from scratch.'
     }
   }
@@ -346,6 +350,7 @@ function renderStaticSections(language) {
     <button data-action="copy-playwright-snippet" title="${strings[language].buttonHints.playwright}">${text('copyPlaywright', language)}</button>
     <button data-action="copy-raw-cdp" title="${strings[language].buttonHints.raw}">${text('copyRaw', language)}</button>
     <button data-action="copy-diagnostics-snapshot" title="${strings[language].buttonHints.diagnostics}">${text('copyDiagnostics', language)}</button>
+    <button data-action="open-release-notes" title="${strings[language].buttonHints.releaseNotes}">${text('openReleaseNotes', language)}</button>
     <button data-action="reset-advanced-replica" title="${strings[language].buttonHints.resetAdvancedReplica}">${text('resetAdvancedReplica', language)}</button>
     <div class="handoff-copy">${text('developerSummary', language)}</div>
     <div class="handoff-copy">${text('developerModes', language)}</div>
@@ -539,6 +544,10 @@ document.addEventListener('click', async (event) => {
   }
   if (action === 'open-data-dir') {
     await window.bridgeApp.invoke('bridge:open-data-dir');
+    return;
+  }
+  if (action === 'open-release-notes') {
+    await window.bridgeApp.invoke('bridge:open-release-notes');
     return;
   }
   if (action === 'copy-clean-install-guide') {

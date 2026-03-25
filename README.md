@@ -2,7 +2,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2B-blue.svg)](#)
 [![Electron](https://img.shields.io/badge/Electron-35.x-47848f.svg)](https://www.electronjs.org/)
-[![Version](https://img.shields.io/badge/Version-0.2.9-green.svg)](./docs/RELEASE_NOTES_0_2_9.md)
+[![Version](https://img.shields.io/badge/Version-0.2.10-green.svg)](./docs/RELEASE_NOTES_0_2_10.md)
 [![cdper MCP](https://img.shields.io/npm/v/@bsbofmusic/cdper-mcp?label=cdper%20MCP&color=CB3837)](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp)
 [![OpenClaw Compatible](https://img.shields.io/badge/Compatible-OpenClaw-181717.svg)](https://openclaw.ai)
 
@@ -112,6 +112,7 @@ curl -X POST "http://<tailscale-ip>:<bridge-port>/control/ensure-site-tab?token=
 - **复制通用Agent Prompt**：已包含bridge地址、启动逻辑、模式选择、WS连接规则，直接粘贴给Agent即可用
 - **复制Playwright代码片段**：可直接运行的Playwright对接代码
 - **复制开发者CDP地址**：原始WS地址，用于手动调试
+- **查看升级日志**：一键打开当前版本对应的 GitHub Release 页面
 - **重置高级模式副本**：删除当前副本，下次启动自动创建新副本
 
 ### 🧹 绿色版重置
@@ -172,6 +173,7 @@ One-click integration helpers are available in the tray menu:
 - **Copy Generic Agent Prompt**: Complete prompt with bridge address, startup logic, mode selection, and WS connection rules
 - **Copy Playwright Snippet**: Ready-to-run Playwright code targeting the bridge
 - **Copy Developer CDP URL**: Raw WebSocket endpoint for manual use/debugging
+- **Open Release Notes**: Open the GitHub release page for the current version
 - **Reset Advanced Replica**: Delete current persistent replica, create fresh one on next launch
 
 ---
