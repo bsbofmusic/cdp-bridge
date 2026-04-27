@@ -1,5 +1,7 @@
 # Remote CDP Skill
 
+> Canonical import path: [`../../skills/remote-cdp/SKILL.md`](../../skills/remote-cdp/SKILL.md). This legacy docs copy remains for old links.
+
 Use this skill when an agent needs to control a user-owned Chrome/Edge/Chromium browser through **cdp-bridge over Tailscale**.
 
 This document is safe for public repositories: it uses placeholders only and never embeds real bridge tokens, GitHub tokens, private IPs, or user-specific WebSocket URLs.

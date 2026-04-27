@@ -11,10 +11,107 @@
 
 ---
 
+## 🤖 Agent 看到这个仓库后先读这里
+
+如果用户把这个仓库 URL 发给 Agent，并说“帮我部署远程浏览器 / cdper MCP / Hermes skill”，Agent 不需要翻完整仓库，按下面顺序做即可。
+
+### 1. 下载并安装 remote-cdp skill
+
+Skill 已放在仓库顶层，适合直接下载导入：
+
+- 仓库路径：[`skills/remote-cdp/SKILL.md`](./skills/remote-cdp/SKILL.md)
+- Raw 下载：`https://raw.githubusercontent.com/bsbofmusic/cdp-bridge/main/skills/remote-cdp/SKILL.md`
+
+Hermes Agent 安装命令：
+
+```bash
+mkdir -p ~/.hermes/skills/mcp/remote-cdp
+curl -fsSL \
+  https://raw.githubusercontent.com/bsbofmusic/cdp-bridge/main/skills/remote-cdp/SKILL.md \
+  -o ~/.hermes/skills/mcp/remote-cdp/SKILL.md
+hermes skills list | grep remote-cdp
+```
+
+### 2. 配置 cdper MCP
+
+在 Hermes / OpenCode / OpenClaw / Claude Desktop / Cursor 的 MCP 配置里注册：
+
+```yaml
+mcp_servers:
+  cdper:
+    command: npx
+    args:
+      - -y
+      - '@bsbofmusic/cdper-mcp@1.4.8'
+    type: stdio
+    enabled: true
+    connect_timeout: 60
+    timeout: 600
+```
+
+然后安装官方工具包：
+
+```bash
+npx -y @bsbofmusic/cdper-mcp@1.4.8 install chatgpt
+npx -y @bsbofmusic/cdper-mcp@1.4.8 install doubao
+npx -y @bsbofmusic/cdper-mcp@1.4.8 install reddit
+```
+
+### 3. 接入 cdp-bridge
+
+Agent 只需要向用户确认缺失的三项：
+
+- `<TAILSCALE_IP>`：运行 cdp-bridge 的 Windows 机器 Tailscale IP / MagicDNS
+- `<BRIDGE_PORT>`：bridge 端口
+- `<TOKEN>`：bridge token
+
+推荐把 token 放进本机私有配置文件，不要写进 README、日志或记忆：
+
+```bash
+mkdir -p ~/.cdp-bridge
+chmod 700 ~/.cdp-bridge
+cat > ~/.cdp-bridge/config.json <<'JSON'
+{
+  "bridgePort": <BRIDGE_PORT>,
+  "token": "<TOKEN>"
+}
+JSON
+chmod 600 ~/.cdp-bridge/config.json
+```
+
+如果 bridge 不在本机，给 MCP server 设置：
+
+```bash
+CDP_BRIDGE_HOST=<TAILSCALE_IP>
+CDP_BRIDGE_CONFIG_PATH=$HOME/.cdp-bridge/config.json
+```
+
+### 4. 验证部署
+
+```bash
+npx -y @bsbofmusic/cdper-mcp@1.4.8 doctor
+npx -y @bsbofmusic/cdper-mcp@1.4.8 capabilities
+npx -y @bsbofmusic/cdper-mcp@1.4.8 install chatgpt --dry-run
+```
+
+Hermes 原生 MCP 验证：
+
+```bash
+hermes mcp list
+hermes mcp test cdper
+```
+
+### 5. [SUPERMEMORY] 记忆规则
+
+如果 Agent 有 Supermemory，只能保存非敏感稳定事实：skill 路径、包版本、bridge 端口、browser mode、profile 名称。不要保存 CDP token、SSH 密码、API key、带 `token=` 的 WebSocket URL、cookie 或 session dump。
+
+---
+
 ## 📚 快速导航
 - [中文文档](#chinese-docs)
 - [English Documentation](#english-docs)
 - [官方配套工具](#official-tools)
+- [Agent Skill / Hermes / SUPERMEMORY](#agent-skill--hermes--supermemory)
 - [常见问题](#faq)
 
 ---
@@ -216,9 +313,45 @@ cdper_doctor
 ✅ 内置小红书/Reddit/亚马逊提取模板 | ✅ 自动反爬 | ✅ 结果自动归档 | ✅ 多节点负载均衡
 👉 [cdper MCP文档](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp)
 
-### 2. Remote CDP Skill（Agent直接导入可用）
-针对OpenClaw等支持Skill的Agent，官方提供了去敏的`remote-cdp`Skill，导入后直接就能用，不用写规则：
-👉 [Skill下载地址](./docs/skills/remote-cdp.md)
+<a id="agent-skill--hermes--supermemory"></a>
+
+### 2. Remote CDP Skill（Agent 直接导入可用）
+针对 Hermes / OpenClaw / OpenCode / Claude / Cursor 等支持 Skill 的 Agent，官方提供了去敏的 `remote-cdp` Skill。现在放在仓库顶层 `skills/`，不用再去 `docs/` 里翻：
+
+- ✅ Canonical Skill：[`skills/remote-cdp/SKILL.md`](./skills/remote-cdp/SKILL.md)
+- 📚 Skill 索引：[`skills/README.md`](./skills/README.md)
+- 🧾 旧链接兼容：[`docs/skills/remote-cdp.md`](./docs/skills/remote-cdp.md)
+
+Hermes 一键安装到本地 skill 树：
+
+```bash
+mkdir -p ~/.hermes/skills/mcp/remote-cdp
+curl -fsSL \
+  https://raw.githubusercontent.com/bsbofmusic/cdp-bridge/main/skills/remote-cdp/SKILL.md \
+  -o ~/.hermes/skills/mcp/remote-cdp/SKILL.md
+hermes skills list | grep remote-cdp
+```
+
+### 3. Hermes + SUPERMEMORY 记忆边界
+
+如果 Hermes / OpenCode / OpenClaw 已启用 **Supermemory**，建议只保存“长期稳定且非敏感”的部署事实，避免每次重新发现环境：
+
+可以保存：
+- `cdp-bridge` 是宿主机浏览器 appliance
+- `cdper-mcp` 是远端 MCP 控制器
+- canonical skill 路径：`skills/remote-cdp/SKILL.md`
+- Hermes skill 安装路径：`~/.hermes/skills/mcp/remote-cdp/SKILL.md`
+- bridge 端口、浏览器模式、profile 名称
+- npm 包 pin，例如 `@bsbofmusic/cdper-mcp@1.4.8`
+
+不要保存：
+- CDP token
+- SSH 密码
+- API key
+- 带 `token=` 的 WebSocket URL
+- Cookie / session dump
+
+Supermemory 里召回到的 host/port/profile 只能作为线索；实际使用前仍要通过 `/status?token=<TOKEN>` 和 `/json/version?token=<TOKEN>` 重新验证。
 
 ---
 
