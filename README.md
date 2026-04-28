@@ -360,6 +360,19 @@ export CDP_BRIDGE_HOST=<TAILSCALE_IP>
 ✅ 强交互控制 | ✅ 登录态复用 | ✅ 截图取证 | ✅ 可被 Playwright/Puppeteer-CDP 工具共用
 👉 [cdper MCP文档](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp)
 
+#### 何时不用 cdper
+
+cdper 的边界是控制用户真实本地浏览器，不负责替代公开网页扫描器或通用阅读器：
+
+| 任务 | 推荐工具 | 说明 |
+|---|---|---|
+| 登录态、点击、输入、截图取证 | cdper | 需要 CDP Bridge 和用户真实浏览器状态 |
+| 公开网页快速扫描/只读检索 | Lightpanda | 可作为 companion tool 先找材料 |
+| JS 渲染后的复杂页面阅读 | Dokobot | 可作为 companion tool 做只读提取 |
+| 找资料后执行登录态动作 | Lightpanda/Dokobot + cdper | 先读，再用 cdper 执行真实浏览器操作 |
+
+Lightpanda 和 Dokobot 是推荐的可选 companion tools，不是 cdper 的安装依赖，也不是 cdper 失败后的静默 fallback。需要用户浏览器状态的任务失败时，应报告 cdper/bridge 错误。
+
 ### 1.1 推荐同步安装的高级操控 MCP
 
 如果 Agent 需要更完整的浏览器开发者工具，推荐同步注册：
