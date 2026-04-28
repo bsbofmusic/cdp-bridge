@@ -42,22 +42,31 @@ mcp_servers:
     command: npx
     args:
       - -y
-      - '@bsbofmusic/cdper-mcp@1.4.8'
+      - '@bsbofmusic/cdper-mcp@latest'
     type: stdio
     enabled: true
     connect_timeout: 60
     timeout: 600
 ```
 
-然后安装官方工具包：
+然后 reload MCP 客户端。Hermes 用 `/reload-mcp`；其他客户端重启或重新加载 MCP server。
 
-```bash
-npx -y @bsbofmusic/cdper-mcp@1.4.8 install chatgpt
-npx -y @bsbofmusic/cdper-mcp@1.4.8 install doubao
-npx -y @bsbofmusic/cdper-mcp@1.4.8 install reddit
+可选官方包通过 MCP 工具安装，不再推荐旧的 `node index.js install ...` 子命令：
+
+```text
+cdper_install({ id: "chatgpt" })
+cdper_install({ id: "doubao" })
+cdper_install({ id: "reddit" })
 ```
 
 ### 3. 接入 cdp-bridge
+
+cdper 安装好后，如果还没有 CDP 配置，Agent 必须向用户索要 cdp-bridge 生成的连接信息，不要猜 token、不扫公网：
+
+```text
+请复制 CDP Bridge 里的完整 WS URL，或提供 Tailscale IP、bridge port 和 WS token。
+格式：ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>
+```
 
 Agent 只需要向用户确认缺失的三项：
 
@@ -86,12 +95,20 @@ CDP_BRIDGE_HOST=<TAILSCALE_IP>
 CDP_BRIDGE_CONFIG_PATH=$HOME/.cdp-bridge/config.json
 ```
 
+也可以直接写完整 WS URL：
+
+```bash
+cat > ~/.cdp-auth.json <<'JSON'
+{"ws_url":"ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>"}
+JSON
+chmod 600 ~/.cdp-auth.json
+```
+
 ### 4. 验证部署
 
 ```bash
-npx -y @bsbofmusic/cdper-mcp@1.4.8 doctor
-npx -y @bsbofmusic/cdper-mcp@1.4.8 capabilities
-npx -y @bsbofmusic/cdper-mcp@1.4.8 install chatgpt --dry-run
+npx -y @bsbofmusic/cdper@latest doctor
+npm view @bsbofmusic/cdper-mcp version
 ```
 
 Hermes 原生 MCP 验证：
@@ -101,7 +118,35 @@ hermes mcp list
 hermes mcp test cdper
 ```
 
-### 5. [SUPERMEMORY] 记忆规则
+### 5. 推荐同步注册 Playwright / Puppeteer 系 MCP
+
+cdper 是基础强交互控制入口；如果 Agent 还需要更完整的浏览器开发者工具，推荐同步准备两个可选 MCP：
+
+```yaml
+mcp_servers:
+  playwright:
+    command: npx
+    args:
+      - -y
+      - '@playwright/mcp@latest'
+      - --cdp-endpoint
+      - 'ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>'
+    type: stdio
+
+  chrome-devtools:
+    command: npx
+    args:
+      - -y
+      - 'chrome-devtools-mcp@latest'
+      - '--wsEndpoint=ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>'
+    type: stdio
+```
+
+- Playwright 路线：`@playwright/mcp`，适合高级页面操作、截图、网络/控制台调试。
+- Puppeteer 路线：`chrome-devtools-mcp`，是 Chrome DevTools/Puppeteer-CDP 方向的现成 MCP；当前没有官方 `@puppeteer/mcp`。
+- 这两个 MCP 都连接同一个 cdp-bridge WS endpoint；不要让它们各自启动新的本地浏览器。
+
+### 6. [SUPERMEMORY] 记忆规则
 
 如果 Agent 有 Supermemory，只能保存非敏感稳定事实：skill 路径、包版本、bridge 端口、browser mode、profile 名称。不要保存 CDP token、SSH 密码、API key、带 `token=` 的 WebSocket URL、cookie 或 session dump。
 
@@ -276,42 +321,55 @@ One-click integration helpers are available in the tray menu:
 
 ### Zero to first query (cdper-mcp)
 
-```bash
-npm install -g @bsbofmusic/cdper-mcp
-echo '{"ws_url": "ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>"}' > ~/.cdp-auth.json
-cdper-mcp install chatgpt
-cdper-mcp install doubao
-cdper_doctor
-```
+1. Register `@bsbofmusic/cdper-mcp@latest` through `npx` in your MCP client.
+2. Ask the user for the CDP Bridge generated WS URL or the Tailscale IP + bridge port + token.
+3. Store it in `~/.cdp-auth.json` or `~/.cdp-bridge/config.json` locally, then run `npx -y @bsbofmusic/cdper@latest doctor` or call the `cdper_doctor` MCP tool.
+4. Install optional official packages from MCP tools when needed: `cdper_install({ id: "chatgpt" })`, `cdper_install({ id: "doubao" })`, `cdper_install({ id: "reddit" })`.
 
 Then register as MCP server and call `chatgpt_query` or `doubao_query`. See [cdper-mcp docs](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp).
 
 ---
 
 ## 🛠️ 官方配套工具 {#official-tools}
-### 1. cdper MCP（零代码网页自动化工具）
-不用写Puppeteer/Playwright对接代码，cdper是官方配套的MCP工具，直接对接CDP Bridge实现网页抓取/截图/批量爬取/结构化提取：
-```bash
-# 1. 安装 cdper-mcp
-npm install -g @bsbofmusic/cdper-mcp
+### 1. cdper MCP（强交互真实浏览器控制工具）
+不用写 Puppeteer/Playwright 对接代码，cdper 是官方配套的 MCP 工具，直接对接 CDP Bridge 实现打开页面、snapshot、点击、输入、按键、等待、截图、执行 JS 和 tab 管理。
 
-# 2. 配置 CDP Bridge 地址（从托盘复制 WS 地址）
-echo '{"ws_url": "ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>"}' > ~/.cdp-auth.json
+推荐 MCP 配置：
 
-# 3. 安装官方插件包
-cdper-mcp install chatgpt
-cdper-mcp install doubao
-cdper-mcp install reddit
-
-# 4. 验证环境
-cdper_doctor
-
-# 5. 注册为 MCP server（Claude Desktop / OpenClaw / Cursor 等）
-# 在 MCP 客户端配置中添加：
-# { "mcpServers": { "cdper": { "command": "cdper-mcp", "args": [] } } }
+```json
+{
+  "mcpServers": {
+    "cdper": {
+      "command": "npx",
+      "args": ["-y", "@bsbofmusic/cdper-mcp@latest"]
+    }
+  }
+}
 ```
-✅ 内置小红书/Reddit/亚马逊提取模板 | ✅ 自动反爬 | ✅ 结果自动归档 | ✅ 多节点负载均衡
+
+安装后如果没有 CDP 配置，Agent 应向用户索要 CDP Bridge 生成的完整 WS URL，或 Tailscale IP + bridge port + token，然后写入本机私有配置：
+
+```bash
+mkdir -p ~/.cdp-bridge
+cat > ~/.cdp-bridge/config.json <<'JSON'
+{"bridgePort": <BRIDGE_PORT>, "token": "<TOKEN>"}
+JSON
+export CDP_BRIDGE_HOST=<TAILSCALE_IP>
+```
+
+✅ 强交互控制 | ✅ 登录态复用 | ✅ 截图取证 | ✅ 可被 Playwright/Puppeteer-CDP 工具共用
 👉 [cdper MCP文档](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp)
+
+### 1.1 推荐同步安装的高级操控 MCP
+
+如果 Agent 需要更完整的浏览器开发者工具，推荐同步注册：
+
+| 方向 | MCP | 连接方式 |
+|---|---|---|
+| Playwright | `@playwright/mcp@latest` | `--cdp-endpoint <BRIDGE_WS_URL>` |
+| Puppeteer / Chrome DevTools | `chrome-devtools-mcp@latest` | `--wsEndpoint=<BRIDGE_WS_URL>` |
+
+注意：当前没有官方 `@puppeteer/mcp`。Puppeteer 路线推荐用 Google 的 `chrome-devtools-mcp`，或开发者脚本里直接使用 `puppeteer-core` 连接同一个 WS endpoint。
 
 <a id="agent-skill--hermes--supermemory"></a>
 
@@ -342,7 +400,7 @@ hermes skills list | grep remote-cdp
 - canonical skill 路径：`skills/remote-cdp/SKILL.md`
 - Hermes skill 安装路径：`~/.hermes/skills/mcp/remote-cdp/SKILL.md`
 - bridge 端口、浏览器模式、profile 名称
-- npm 包 pin，例如 `@bsbofmusic/cdper-mcp@1.4.8`
+- npm 包安装入口，例如 `@bsbofmusic/cdper-mcp@latest`
 
 不要保存：
 - CDP token
