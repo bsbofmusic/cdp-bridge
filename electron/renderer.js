@@ -274,6 +274,61 @@ function text(key, language) {
   return strings[language]?.[key] ?? strings['zh-CN'][key];
 }
 
+function buttonHint(key, language) {
+  return (strings[language]?.buttonHints ?? strings['zh-CN'].buttonHints)[key] ?? '';
+}
+
+function createElement(tagName, options = {}, children = []) {
+  const element = document.createElement(tagName);
+  if (options.className) {
+    element.className = options.className;
+  }
+  if (options.textContent !== undefined) {
+    element.textContent = String(options.textContent);
+  }
+  if (options.title !== undefined) {
+    element.title = String(options.title);
+  }
+  if (options.dataset) {
+    Object.assign(element.dataset, options.dataset);
+  }
+  element.append(...children);
+  return element;
+}
+
+function createButton(action, label, title) {
+  return createElement('button', {
+    dataset: { action },
+    textContent: label,
+    title
+  });
+}
+
+function createCopyBlock(content) {
+  return createElement('div', {
+    className: 'handoff-copy',
+    textContent: content
+  });
+}
+
+function createMetricCard(label, value) {
+  return createElement('div', { className: 'metric-card' }, [
+    createElement('strong', { textContent: label }),
+    createElement('span', { textContent: value })
+  ]);
+}
+
+function createDiagnosticRow(label, value) {
+  return createElement('div', {}, [
+    createElement('strong', { textContent: label }),
+    createElement('span', { textContent: value })
+  ]);
+}
+
+function phaseClassName(phase) {
+  return `status-${String(phase ?? 'unknown').replace(/[^a-z0-9_-]/gi, '-')}`;
+}
+
 function setFeedback(message, type = 'info') {
   feedbackMessageRoot.textContent = message;
   feedbackRoot.dataset.state = type;
@@ -323,11 +378,20 @@ function syncAdvancedProfiles(state) {
   const signature = buildProfileSignature(availableProfiles);
 
   if (signature !== renderedProfileSignature) {
-    advancedProfileSelect.innerHTML = availableProfiles.length > 0
-      ? availableProfiles
-        .map((profile) => `<option value="${profile.directory}">${profile.label}</option>`)
-        .join('')
-      : '<option value="Default">Default</option>';
+    const profileOptions = availableProfiles.length > 0
+      ? availableProfiles.map((profile) => {
+        const option = document.createElement('option');
+        option.value = String(profile.directory ?? 'Default');
+        option.textContent = String(profile.label ?? profile.directory ?? 'Default');
+        return option;
+      })
+      : (() => {
+        const option = document.createElement('option');
+        option.value = 'Default';
+        option.textContent = 'Default';
+        return [option];
+      })();
+    advancedProfileSelect.replaceChildren(...profileOptions);
     renderedProfileSignature = signature;
   }
 
@@ -335,27 +399,27 @@ function syncAdvancedProfiles(state) {
 }
 
 function renderStaticSections(language) {
-  actionsRoot.innerHTML = `
-    <button data-action="start" title="${strings[language].buttonHints.startBridge}">${text('startBridge', language)}</button>
-    <button data-action="rotate-token" title="${strings[language].buttonHints.rotateToken}">${text('rotateToken', language)}</button>
-    <button data-action="refresh" title="${strings[language].buttonHints.refresh}">${text('refresh', language)}</button>
-  `;
+  actionsRoot.replaceChildren(
+    createButton('start', text('startBridge', language), buttonHint('startBridge', language)),
+    createButton('rotate-token', text('rotateToken', language), buttonHint('rotateToken', language)),
+    createButton('refresh', text('refresh', language), buttonHint('refresh', language))
+  );
 
-  handoffRoot.innerHTML = `
-    <button data-action="copy-openclaw-prompt" title="${strings[language].buttonHints.copyPrompt}">${text('copyPrompt', language)}</button>
-    <div class="handoff-copy">${text('handoffSummary', language)}</div>
-  `;
+  handoffRoot.replaceChildren(
+    createButton('copy-openclaw-prompt', text('copyPrompt', language), buttonHint('copyPrompt', language)),
+    createCopyBlock(text('handoffSummary', language))
+  );
 
-  developerRoot.innerHTML = `
-    <button data-action="copy-playwright-snippet" title="${strings[language].buttonHints.playwright}">${text('copyPlaywright', language)}</button>
-    <button data-action="copy-raw-cdp" title="${strings[language].buttonHints.raw}">${text('copyRaw', language)}</button>
-    <button data-action="copy-diagnostics-snapshot" title="${strings[language].buttonHints.diagnostics}">${text('copyDiagnostics', language)}</button>
-    <button data-action="open-release-notes" title="${strings[language].buttonHints.releaseNotes}">${text('openReleaseNotes', language)}</button>
-    <button data-action="reset-advanced-replica" title="${strings[language].buttonHints.resetAdvancedReplica}">${text('resetAdvancedReplica', language)}</button>
-    <div class="handoff-copy">${text('developerSummary', language)}</div>
-    <div class="handoff-copy">${text('developerModes', language)}</div>
-    <div class="handoff-copy">${text('developerMaintainer', language)}</div>
-  `;
+  developerRoot.replaceChildren(
+    createButton('copy-playwright-snippet', text('copyPlaywright', language), buttonHint('playwright', language)),
+    createButton('copy-raw-cdp', text('copyRaw', language), buttonHint('raw', language)),
+    createButton('copy-diagnostics-snapshot', text('copyDiagnostics', language), buttonHint('diagnostics', language)),
+    createButton('open-release-notes', text('openReleaseNotes', language), buttonHint('releaseNotes', language)),
+    createButton('reset-advanced-replica', text('resetAdvancedReplica', language), buttonHint('resetAdvancedReplica', language)),
+    createCopyBlock(text('developerSummary', language)),
+    createCopyBlock(text('developerModes', language)),
+    createCopyBlock(text('developerMaintainer', language))
+  );
 }
 
 function renderFrame(language) {
@@ -379,9 +443,9 @@ function renderFrame(language) {
   document.getElementById('open-data-dir-button').textContent = text('openDataDir', language);
   document.getElementById('open-data-dir-button').title = text('openDataDir', language);
   document.getElementById('open-uninstaller-button').textContent = text('openUninstaller', language);
-  document.getElementById('open-uninstaller-button').title = strings[language].buttonHints.uninstall;
+  document.getElementById('open-uninstaller-button').title = buttonHint('uninstall', language);
   document.getElementById('clean-install-guide-button').textContent = text('cleanInstallGuide', language);
-  document.getElementById('clean-install-guide-button').title = strings[language].buttonHints.cleanInstall;
+  document.getElementById('clean-install-guide-button').title = buttonHint('cleanInstall', language);
   if (renderedLanguage !== language) {
     renderStaticSections(language);
     renderedLanguage = language;
@@ -440,48 +504,59 @@ function render(state) {
       ? text('cdpStarting', language)
       : text('unavailable', language);
 
-  statusRoot.innerHTML = `
-    <div class="status-hero">
-      <div class="status-pill status-${state.phase}">${state.phase}</div>
-      <div class="status-value">${tailscaleSummary}</div>
-    </div>
-    <div class="status-grid cards-grid">
-      <div class="metric-card"><strong>${text('appLayer', language)}</strong><span>${appStatus}</span></div>
-      <div class="metric-card"><strong>${text('bridgeLayer', language)}</strong><span>${bridgeStatus}</span></div>
-      <div class="metric-card"><strong>${text('cdpLayer', language)}</strong><span>${chromeStatus}</span></div>
-      <div class="metric-card"><strong>${text('browser', language)}</strong><span>${state.browserName ?? text('notDetected', language)}</span></div>
-      <div class="metric-card"><strong>${text('mode', language)}</strong><span>${browserModeSummary}</span></div>
-      <div class="metric-card"><strong>${text('tailscale', language)}</strong><span>${tailscaleSummary}</span></div>
-      <div class="metric-card"><strong>${text('repairs', language)}</strong><span>${state.repairCount ?? 0}</span></div>
-    </div>
-  `;
+  const statusPill = createElement('div', {
+    className: `status-pill ${phaseClassName(state.phase)}`,
+    textContent: state.phase ?? text('none', language)
+  });
+  const statusHero = createElement('div', { className: 'status-hero' }, [
+    statusPill,
+    createElement('div', { className: 'status-value', textContent: tailscaleSummary })
+  ]);
+  const statusGrid = createElement('div', { className: 'status-grid cards-grid' }, [
+    createMetricCard(text('appLayer', language), appStatus),
+    createMetricCard(text('bridgeLayer', language), bridgeStatus),
+    createMetricCard(text('cdpLayer', language), chromeStatus),
+    createMetricCard(text('browser', language), state.browserName ?? text('notDetected', language)),
+    createMetricCard(text('mode', language), browserModeSummary),
+    createMetricCard(text('tailscale', language), tailscaleSummary),
+    createMetricCard(text('repairs', language), state.repairCount ?? 0)
+  ]);
+  statusRoot.replaceChildren(statusHero, statusGrid);
 
-  diagnosticsRoot.innerHTML = `
-    <div><strong>${text('ws', language)}</strong><span>${state.wsEndpoint ?? text('unavailable', language)}</span></div>
-    <div><strong>Status</strong><span>${state.statusEndpoint ?? text('unavailable', language)}</span></div>
-    <div><strong>${text('http', language)}</strong><span>${state.versionEndpoint ?? text('unavailable', language)}</span></div>
-    <div><strong>${text('control', language)}</strong><span>${state.controlStartBase ?? text('unavailable', language)}</span></div>
-    <div><strong>${text('appVersion', language)}</strong><span>${state.appVersion ?? state.packageVersion ?? text('unavailable', language)}</span></div>
-    <div><strong>${text('installPath', language)}</strong><span>${state.installPath ?? text('unavailable', language)}</span></div>
-    <div><strong>${text('mode', language)}</strong><span>${browserModeSummary} / ${deviceModeSummary}</span></div>
-    <div><strong>${text('advancedReplica', language)}</strong><span>${state.advancedReplicaState?.status ?? text('none', language)}${state.advancedReplicaState?.lastError ? ` · ${state.advancedReplicaState.lastError}` : ''}</span></div>
-    <div><strong>Replica Root</strong><span>${state.advancedReplicaRootDir ?? text('none', language)}</span></div>
-    <div><strong>${text('config', language)}</strong><span>${state.configPath ?? state.appDir}</span></div>
-    <div><strong>${text('userData', language)}</strong><span>${state.userDataPath ?? state.appDir}</span></div>
-    <div><strong>${text('logs', language)}</strong><span>${state.logDir}</span></div>
-    <div><strong>Mode</strong><span>${state.portableMode ? `Portable ${state.appVersion ?? state.packageVersion ?? ''}`.trim() : 'Installed / Dev'}</span></div>
-    <div><strong>CDP Ready</strong><span>${String(Boolean(state.cdpReady))}</span></div>
-    <div><strong>CDP Error</strong><span>${state.cdpError ?? text('none', language)}</span></div>
-    <div><strong>Last Healthy</strong><span>${state.lastHealthyAt ?? text('none', language)}</span></div>
-    <div><strong>Last Status</strong><span>${state.lastStatusAt ?? text('none', language)}</span></div>
-    <div><strong>Last Remote Start</strong><span>${state.lastRemoteStartAt ? `${state.lastRemoteStartAt}${state.lastRemoteStartMode ? ` · ${state.lastRemoteStartMode}` : ''}` : text('none', language)}</span></div>
-    <div><strong>Config Recovery</strong><span>${state.configRecoveredAt ? `${state.configRecoveredAt} · ${state.configRecoveryReason ?? text('none', language)}` : text('none', language)}</span></div>
-    <div><strong>Recommended Action</strong><span>${state.recommendedAction ?? text('none', language)}</span></div>
-    <div><strong>Status Hint</strong><span>${state.statusHint ?? text('none', language)}</span></div>
-    <div><strong>Diagnostics</strong><span>${state.diagnosticsEndpoint ?? text('none', language)}</span></div>
-    <div><strong>Agent Sessions</strong><span>${Array.isArray(state.activeAgentSessions) ? state.activeAgentSessions.length : 0}</span></div>
-    <div><strong>${text('lastError', language)}</strong><span>${state.lastError ?? text('none', language)}</span></div>
-  `;
+  const advancedReplicaStatus = `${state.advancedReplicaState?.status ?? text('none', language)}${state.advancedReplicaState?.lastError ? ` · ${state.advancedReplicaState.lastError}` : ''}`;
+  const lastRemoteStart = state.lastRemoteStartAt
+    ? `${state.lastRemoteStartAt}${state.lastRemoteStartMode ? ` · ${state.lastRemoteStartMode}` : ''}`
+    : text('none', language);
+  const configRecovery = state.configRecoveredAt
+    ? `${state.configRecoveredAt} · ${state.configRecoveryReason ?? text('none', language)}`
+    : text('none', language);
+
+  diagnosticsRoot.replaceChildren(
+    createDiagnosticRow(text('ws', language), state.wsEndpoint ?? text('unavailable', language)),
+    createDiagnosticRow('Status', state.statusEndpoint ?? text('unavailable', language)),
+    createDiagnosticRow(text('http', language), state.versionEndpoint ?? text('unavailable', language)),
+    createDiagnosticRow(text('control', language), state.controlStartBase ?? text('unavailable', language)),
+    createDiagnosticRow(text('appVersion', language), state.appVersion ?? state.packageVersion ?? text('unavailable', language)),
+    createDiagnosticRow(text('installPath', language), state.installPath ?? text('unavailable', language)),
+    createDiagnosticRow(text('mode', language), `${browserModeSummary} / ${deviceModeSummary}`),
+    createDiagnosticRow(text('advancedReplica', language), advancedReplicaStatus),
+    createDiagnosticRow('Replica Root', state.advancedReplicaRootDir ?? text('none', language)),
+    createDiagnosticRow(text('config', language), state.configPath ?? state.appDir ?? text('none', language)),
+    createDiagnosticRow(text('userData', language), state.userDataPath ?? state.appDir ?? text('none', language)),
+    createDiagnosticRow(text('logs', language), state.logDir ?? text('none', language)),
+    createDiagnosticRow('Mode', state.portableMode ? `Portable ${state.appVersion ?? state.packageVersion ?? ''}`.trim() : 'Installed / Dev'),
+    createDiagnosticRow('CDP Ready', String(Boolean(state.cdpReady))),
+    createDiagnosticRow('CDP Error', state.cdpError ?? text('none', language)),
+    createDiagnosticRow('Last Healthy', state.lastHealthyAt ?? text('none', language)),
+    createDiagnosticRow('Last Status', state.lastStatusAt ?? text('none', language)),
+    createDiagnosticRow('Last Remote Start', lastRemoteStart),
+    createDiagnosticRow('Config Recovery', configRecovery),
+    createDiagnosticRow('Recommended Action', state.recommendedAction ?? text('none', language)),
+    createDiagnosticRow('Status Hint', state.statusHint ?? text('none', language)),
+    createDiagnosticRow('Diagnostics', state.diagnosticsEndpoint ?? text('none', language)),
+    createDiagnosticRow('Agent Sessions', Array.isArray(state.activeAgentSessions) ? state.activeAgentSessions.length : 0),
+    createDiagnosticRow(text('lastError', language), state.lastError ?? text('none', language))
+  );
 
   document.querySelector('[data-setting="launchOnLogin"]').checked = Boolean(state.launchOnLogin);
   document.querySelector('[data-setting="minimizeToTray"]').checked = Boolean(state.minimizeToTray);
@@ -495,7 +570,7 @@ async function boot() {
   }
 
   try {
-    const state = await window.bridgeApp.invoke('bridge:get-state');
+    const state = await window.bridgeApp.getState();
     render(state);
     window.bridgeApp.onState((nextState) => {
       render(nextState);
@@ -513,45 +588,45 @@ document.addEventListener('click', async (event) => {
 
   const action = button.dataset.action;
   if (action === 'start') {
-    await window.bridgeApp.invoke('bridge:start');
+    await window.bridgeApp.startBridge();
   }
   if (action === 'copy-openclaw-prompt') {
-    await window.bridgeApp.invoke('bridge:copy-agent-payload', { kind: 'generic-agent' });
+    await window.bridgeApp.copyAgentPayload('generic-agent');
   }
   if (action === 'copy-playwright-snippet') {
-    await window.bridgeApp.invoke('bridge:copy-agent-payload', { kind: 'playwright' });
+    await window.bridgeApp.copyAgentPayload('playwright');
   }
   if (action === 'copy-raw-cdp') {
-    await window.bridgeApp.invoke('bridge:copy-agent-payload', { kind: 'raw' });
+    await window.bridgeApp.copyAgentPayload('raw');
   }
   if (action === 'copy-diagnostics-snapshot') {
-    await window.bridgeApp.invoke('bridge:copy-diagnostics-snapshot');
+    await window.bridgeApp.copyDiagnosticsSnapshot();
   }
   if (action === 'reset-advanced-replica') {
-    await window.bridgeApp.invoke('bridge:reset-advanced-replica');
+    await window.bridgeApp.resetAdvancedReplica();
   }
   if (action === 'rotate-token') {
-    await window.bridgeApp.invoke('bridge:rotate-token');
+    await window.bridgeApp.rotateToken();
   }
   if (action === 'refresh') {
-    await window.bridgeApp.invoke('bridge:get-state');
+    await window.bridgeApp.getState();
     setFeedback(text('refreshRequested', languageSelect.value));
     return;
   }
   if (action === 'open-uninstaller') {
-    await window.bridgeApp.invoke('bridge:open-uninstaller');
+    await window.bridgeApp.openUninstaller();
     return;
   }
   if (action === 'open-data-dir') {
-    await window.bridgeApp.invoke('bridge:open-data-dir');
+    await window.bridgeApp.openDataDir();
     return;
   }
   if (action === 'open-release-notes') {
-    await window.bridgeApp.invoke('bridge:open-release-notes');
+    await window.bridgeApp.openReleaseNotes();
     return;
   }
   if (action === 'copy-clean-install-guide') {
-    await window.bridgeApp.invoke('bridge:copy-clean-install-guide');
+    await window.bridgeApp.copyCleanInstallGuide();
     return;
   }
   setFeedback(text('actionSent', languageSelect.value));
@@ -560,53 +635,41 @@ document.addEventListener('click', async (event) => {
 document.addEventListener('change', async (event) => {
   const languagePicker = event.target.closest('[data-setting="language"]');
   if (languagePicker) {
-    await window.bridgeApp.invoke('bridge:set-language', {
-      language: languagePicker.value
-    });
+    await window.bridgeApp.setLanguage(languagePicker.value);
     return;
   }
 
   const browserModePicker = event.target.closest('[data-setting="browserMode"]');
   if (browserModePicker) {
-    await window.bridgeApp.invoke('bridge:set-browser-mode', {
-      mode: browserModePicker.value
-    });
+    await window.bridgeApp.setBrowserMode(browserModePicker.value);
     setFeedback(browserModePicker.value === 'advanced' ? text('advancedModeHint', languageSelect.value) : text('cleanModeHint', languageSelect.value));
     return;
   }
 
   const advancedProfilePicker = event.target.closest('[data-setting="advancedProfileDirectory"]');
   if (advancedProfilePicker) {
-    await window.bridgeApp.invoke('bridge:set-advanced-profile', {
-      profile: advancedProfilePicker.value
-    });
+    await window.bridgeApp.setAdvancedProfile(advancedProfilePicker.value);
     setFeedback(text('advancedProfileHint', languageSelect.value));
     return;
   }
 
   const deviceModePicker = event.target.closest('[data-setting="deviceMode"]');
   if (deviceModePicker) {
-    await window.bridgeApp.invoke('bridge:set-device-mode', {
-      mode: deviceModePicker.value
-    });
+    await window.bridgeApp.setDeviceMode(deviceModePicker.value);
     setFeedback(deviceModePicker.value === 'mobile' ? text('mobileModeHint', languageSelect.value) : text('desktopModeHint', languageSelect.value));
     return;
   }
 
   const loginCheckbox = event.target.closest('[data-setting="launchOnLogin"]');
   if (loginCheckbox) {
-    await window.bridgeApp.invoke('bridge:set-launch-on-login', {
-      enabled: loginCheckbox.checked
-    });
+    await window.bridgeApp.setLaunchOnLogin(loginCheckbox.checked);
     setFeedback(loginCheckbox.checked ? text('loginEnabled', languageSelect.value) : text('loginDisabled', languageSelect.value));
     return;
   }
 
   const trayCheckbox = event.target.closest('[data-setting="minimizeToTray"]');
   if (trayCheckbox) {
-    await window.bridgeApp.invoke('bridge:set-minimize-to-tray', {
-      enabled: trayCheckbox.checked
-    });
+    await window.bridgeApp.setMinimizeToTray(trayCheckbox.checked);
     setFeedback(trayCheckbox.checked ? text('trayEnabled', languageSelect.value) : text('trayDisabled', languageSelect.value));
   }
 });

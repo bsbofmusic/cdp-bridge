@@ -16,6 +16,7 @@ const trayIconPath = path.join(__dirname, 'assets', 'app-icon.ico');
 const packageJsonPath = path.join(__dirname, '..', 'package.json');
 const packageMetadata = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const portableMode = isPortableMode();
+const allowedAgentPayloadKinds = new Set(['generic-agent', 'playwright', 'raw', 'diagnostics']);
 
 const translations = {
   'zh-CN': {
@@ -341,8 +342,9 @@ function buildCleanInstallGuide(snapshot) {
 }
 
 function enhanceSnapshot(snapshot) {
+  const { token: _token, ...safeSnapshot } = snapshot;
   return {
-    ...snapshot,
+    ...safeSnapshot,
     appVersion: app.getVersion(),
     packageVersion: packageMetadata.version,
     installPath: process.execPath,
@@ -365,7 +367,7 @@ function buildAgentPayload(kind, snapshot) {
     case 'diagnostics':
       return { text: buildDiagnosticsSnapshot(snapshot), notice: t(snapshot.language ?? 'zh-CN', 'copiedDiagnostics') };
     default:
-      return { text: snapshot.wsEndpoint ?? '', notice: t(snapshot.language ?? 'zh-CN', 'copiedRaw') };
+      throw new Error(`Unsupported agent payload kind: ${kind}`);
   }
 }
 
@@ -452,6 +454,9 @@ async function copyOpenClawPrompt() {
 }
 
 async function copyAgentPayload(kind) {
+  if (!allowedAgentPayloadKinds.has(kind)) {
+    throw new Error(`Unsupported agent payload kind: ${kind}`);
+  }
   const snapshot = supervisor.getSnapshot();
   const payload = buildAgentPayload(kind, snapshot);
   clipboard.writeText(payload.text);

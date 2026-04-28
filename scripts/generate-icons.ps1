@@ -1,6 +1,8 @@
 Add-Type -AssemblyName System.Drawing
 
-$assetDir = 'D:\CODE\cdp-bridge\electron\assets'
+$scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+$repoRoot = Split-Path -Parent $scriptDir
+$assetDir = Join-Path $repoRoot 'electron\assets'
 if (!(Test-Path $assetDir)) {
   New-Item -ItemType Directory -Path $assetDir | Out-Null
 }

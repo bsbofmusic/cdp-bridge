@@ -1,4 +1,5 @@
 import http from 'node:http';
+import crypto from 'node:crypto';
 import { URL } from 'node:url';
 
 import { WebSocket, WebSocketServer } from 'ws';
@@ -75,7 +76,8 @@ function bridgeUnavailablePayload(config, error) {
   };
 }
 
-function getStatusContract(config, metadata, controls = {}) {
+function getStatusContract(config, metadata, controls = {}, options = {}) {
+  const includeSecrets = Boolean(options.includeSecrets);
   const canRemoteStart = Boolean(controls.start && config.launchChrome);
   const bridgeReady = true;
   const recommendedAction = !metadata.tailscale?.online
@@ -93,7 +95,7 @@ function getStatusContract(config, metadata, controls = {}) {
         ? 'Bridge is online in standby mode. Chrome CDP is not active yet, and remote start is disabled.'
         : 'Bridge and Chrome CDP are ready. Agents can connect now.';
 
-  return {
+  const contract = {
     ok: true,
     checkedAt: new Date().toISOString(),
     bridgeReady,
@@ -101,7 +103,6 @@ function getStatusContract(config, metadata, controls = {}) {
     chromeDebugPort: config.chromeDebugPort,
     tailscaleIp: metadata.tailscaleIp,
     tailscale: metadata.tailscale,
-    wsEndpoint: metadata.wsUrl,
     cdpReady: metadata.cdpReady,
     cdpError: metadata.cdpError,
     canRemoteStart,
@@ -114,6 +115,14 @@ function getStatusContract(config, metadata, controls = {}) {
         }
       : null
   };
+
+  if (includeSecrets) {
+    contract.wsEndpoint = metadata.wsUrl;
+  } else {
+    contract.endpointDetails = 'Authenticate with token on /json/version or /status for CDP endpoint details.';
+  }
+
+  return contract;
 }
 
 function json(response, statusCode, payload) {
@@ -123,7 +132,18 @@ function json(response, statusCode, payload) {
 
 function isAuthorized(request, token) {
   const parsed = new URL(request.url, 'http://127.0.0.1');
-  return parsed.searchParams.get('token') === token;
+  const providedToken = parsed.searchParams.get('token');
+  if (!providedToken || !token) {
+    return false;
+  }
+
+  const provided = Buffer.from(providedToken);
+  const expected = Buffer.from(token);
+  if (provided.length !== expected.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(provided, expected);
 }
 
 export async function startBridgeServer(config, controls = {}) {
@@ -145,7 +165,9 @@ export async function startBridgeServer(config, controls = {}) {
         metadata.cdpError = error.message;
       }
 
-      return json(response, 200, getStatusContract(config, metadata, controls));
+      return json(response, 200, getStatusContract(config, metadata, controls, {
+        includeSecrets: isAuthorized(request, config.token)
+      }));
     }
 
     if (parsed.pathname === '/json/version') {
