@@ -1,192 +1,85 @@
 # remote-cdp Skill
 
-Use this skill when an agent must operate the user's **real remote Windows Chrome/Edge browser** exposed by CDP Bridge.
+cdper controls the user's **real remote Chrome/Edge** through CDP Bridge. It is not a search engine, crawler, or reader — it operates the user's actual browser with their login state, cookies, and extensions.
 
-This repository keeps one standard agent path: **cdper + Playwright CDP**.
+**Chain**: `Agent → cdper MCP → cdper CLI → CDP Bridge → user's Chrome/Edge`
 
-## 1. Source of truth
+Current kernel: `playwright-cdp` (Playwright CDP is the internal driver; cdper's public contract is browser control, not Playwright APIs).
 
-The only browser that counts for this workflow is:
+---
 
-```text
-Agent / MCP client
-  -> cdper MCP with CDPER_KERNEL=playwright-cdp
-  -> cdp-bridge over Tailscale
-  -> user's remote Windows Chrome/Edge session
+## 1. BEFORE ANY BROWSER ACTION: Verify
+
+```
+cdper_doctor({ deep: true })
 ```
 
-For advanced scripts, use `playwright-core` with `chromium.connectOverCDP(<Bridge WS URL>)` against the same endpoint.
-
-Do not replace this logged-in browser with a local browser launch, curl, web search, or any independent unauthenticated browser when login state matters.
-
-## 2. Install and configure
-
-Latest verified packages:
-
-- `@bsbofmusic/cdper@latest` (verified baseline `1.0.10`)
-- `@bsbofmusic/cdper-mcp@latest` (verified baseline `1.5.9`)
-
-MCP config:
-
-```yaml
-mcp_servers:
-  cdper:
-    command: npx
-    args:
-      - -y
-      - '@bsbofmusic/cdper-mcp@latest'
-    type: stdio
-    enabled: true
-    connect_timeout: 60
-    timeout: 600
-    env:
-      CDPER_KERNEL: playwright-cdp
-      CDPER_NO_UPDATE_CHECK: '1'
+Or via CLI:
+```
+cdper --kernel playwright-cdp verify-kernel --json
 ```
 
-Reload the MCP client after config changes. Hermes users should run `/reload-mcp`.
+Expected: `{ ok: true, kernel: "playwright-cdp", bridge: true, browser: true, smoke: { open: true, snapshot: true, eval: true, screenshot: true, close: true } }`
 
-## 3. Private CDP connection config
+If doctor fails → diagnose by layer (config → bridge → browser → page), do NOT switch to a different tool.
 
-Ask the user for the CDP Bridge WS URL or for Tailscale IP + bridge port + token. Do not guess token values and do not scan public networks.
+## 2. STANDARD FLOW: open → snapshot → act → verify → close
 
-Preferred full URL file:
-
-```bash
-cat > ~/.cdp-auth.json <<'JSON'
-{"ws_url":"ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>"}
-JSON
-chmod 600 ~/.cdp-auth.json
 ```
-
-Host + token file:
-
-```bash
-mkdir -p ~/.cdp-bridge
-cat > ~/.cdp-bridge/config.json <<'JSON'
-{"bridgePort": <BRIDGE_PORT>, "token": "<TOKEN>"}
-JSON
-chmod 600 ~/.cdp-bridge/config.json
-export CDP_BRIDGE_HOST=<TAILSCALE_IP>
-```
-
-## 4. Verify before acting
-
-Run:
-
-```bash
-npx -y @bsbofmusic/cdper-mcp@latest --version
-npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --json
-```
-
-If this repository is cloned:
-
-```bash
-npm run verify:cdper-playwright
-```
-
-The verifier runs a real open/snapshot/eval/screenshot/close smoke flow and prints only redacted output.
-
-## 5. cdper MCP standard control loop
-
-Use cdper for the default agent workflow:
-
-```text
 1. cdp_open({ url, label })
-2. cdp_snapshot({ tabId })
-3. cdp_click({ tabId, ref }) / cdp_type({ tabId, ref, text, clear }) / cdp_press({ tabId, key })
-4. cdp_wait({ tabId, text or selector, timeoutMs })
-5. cdp_snapshot({ tabId }) or cdp_eval({ tabId, expression }) or cdp_screenshot({ tabId })
-6. cdp_close({ tabId }) only for tabs created by this agent/task
+2. cdp_snapshot({ tabId })              → get fresh @ref values
+3. cdp_click / cdp_type / cdp_press    → use @ref from step 2
+4. cdp_wait({ tabId, text/selector })  → wait for page change
+5. cdp_snapshot or cdp_eval or cdp_screenshot  → verify result
+6. cdp_close({ tabId })                → close only tabs you opened
 ```
 
-### Stability rules
+**@ref rules**:
+- `@ref` is valid only within the snapshot that produced it
+- Re-snapshot after: navigation, waits >5s, DOM changes, or stale-ref errors
+- Never guess a ref. If it's missing or wrong, fail closed and re-snapshot
 
-| Area | Full-score requirement | Acceptable degradation |
+**Tab ownership**: Only close tabs you created. If ownership is unclear, leave the tab open.
+
+## 3. PROHIBITIONS
+
+| Prohibited | Why |
+|---|---|
+| Silent fallback to `web_search`, `curl`, `Lightpanda`, `Dokobot` after cdper fails | These tools have no login state; "success" via fallback is a false positive |
+| `chromium.launch()` or any local browser start | cdper's value is the user's real browser; local Chrome has no login state |
+| Storing `token=...` or full `ws://...token=...` in memory, logs, or reports | Token leaks compromise the user's browser |
+| Using stale `@ref` after page changes | Will click wrong elements or fail |
+| Closing tabs you didn't create | May destroy user work |
+
+## 4. FAILURE TRIAGE
+
+| Symptom | Layer | Fix |
 |---|---|---|
-| Open result | Treat `tabId` as the handle for all later operations | If open fails, report the bridge/cdper error; do not switch tools silently |
-| Snapshot refs | `@ref` is scoped to the latest snapshot only | Re-snapshot after navigation, waits, DOM changes, or if more than about 5 seconds passed before click/type |
-| Click/type | Use refs from the latest snapshot | If ref is missing/stale, fail closed and re-snapshot; do not guess another ref |
-| Wait | Wait for explicit text/selector or a bounded timeout | If timeout occurs, inspect current state with snapshot/eval/screenshot before retrying |
-| Eval | Use for current-page inspection and small DOM extraction | Do not turn cdper into a high-volume crawler |
-| Screenshot | Use as evidence after visual changes | If screenshot fails, report it and try `lite` mode |
-| Close | Close only tabs opened by this agent/task | If ownership is uncertain, leave the tab open |
-| Errors | Diagnose with doctor/status/tabs | Never hide failures by switching to a different browser path |
+| `cdper_doctor` returns `ok: false` | Config/Bridge | Check `CDP_WS`, `~/.cdp-auth.json`, ask user for Bridge WS URL |
+| `bridgeReachable: false` | Bridge | Verify Bridge is running, check Tailscale connectivity |
+| `browserReady: false` | Browser | Bridge is up but Chrome is standby; start browser from Bridge UI |
+| `cdp_open` fails | MCP/CLI/Bridge | Run `cdper_doctor`, check bridge health, report error |
+| `@ref` stale or missing | Page | Re-run `cdp_snapshot`, use fresh refs |
+| `doubao_query` timeout but `cdp_open doubao.com` works | Plugin adapter | Not a kernel failure; adapter selector may need update |
+| `chatgpt_query` returns `degraded` for short answer | smart_wait | Short answers are now `ok` (complete_short); upgrade to latest |
+| `verify-kernel` fails | Kernel | Reinstall `@bsbofmusic/cdper@latest`, run `doctor --deep` |
 
-## 6. Advanced Playwright CDP path
+## 5. HYBRID FALLBACK
 
-Use raw Playwright only when cdper is too low-level for a task: complex selectors, repeated flows, page-object style automation, file upload/download, batch DOM extraction, or screenshot + vision feedback.
+When `chatgpt_query` or `doubao_query` fails (timeout, mode error, input not found):
 
-Critical rule: **connect to CDP Bridge; do not launch a local browser.**
+1. **First**: run `cdper_doctor({ deep: true })` — if kernel/bridge/browser fail, fix those first
+2. **Confirm**: open the target site with `cdp_open` — if it loads, the kernel is fine and the adapter selector is the problem
+3. **Fallback**: use `cdp_snapshot` → `cdp_click` / `cdp_type` → `cdp_wait` → `cdp_eval` to perform the query manually
+4. **Stop** using the fallback once the adapter is updated and working again
 
-```js
-const { chromium } = require('playwright-core');
+See the cdper fallback runbooks for step-by-step procedures:
 
-const browser = await chromium.connectOverCDP('ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>');
-const context = browser.contexts()[0];
-const page = await context.newPage();
+- ChatGPT: https://github.com/bsbofmusic/cdper/blob/main/skills/chatgpt-fallback/SKILL.md
+- Doubao: https://github.com/bsbofmusic/cdper/blob/main/skills/doubao-fallback/SKILL.md
 
-try {
-  await page.goto('https://example.com', { waitUntil: 'domcontentloaded' });
-  await page.screenshot({ path: '/tmp/remote-page.png', fullPage: true });
-  const text = await page.evaluate(() => document.body.innerText);
-  console.log(text.slice(0, 2000));
-} finally {
-  await page.close(); // close only the page this script created
-  await browser.close(); // closes the client connection, not the remote Chrome process
-}
-```
+## 6. SECRETS
 
-Playwright safety rules:
-
-- Use `connectOverCDP` only.
-- Do not use `chromium.launch()` for remote-browser tasks.
-- Prefer `browser.contexts()[0]` to reuse the remote browser's logged-in context.
-- Open a new page for the agent task unless the user explicitly asks to operate an existing tab.
-- Close only pages created by the agent. Do not close existing user tabs, the context, or the remote browser process.
-
-## 7. CDP Bridge health and failure handling
-
-If a tool fails, distinguish the layers:
-
-```text
-cdper MCP failed      != cdp-bridge failed
-cdp-bridge reachable != browser CDP ready
-browser CDP ready    != page task succeeded
-```
-
-Recommended checks:
-
-```text
-1. cdper_doctor()
-2. GET /health                         # public, minimal
-3. GET /status                         # public readiness, redacted
-4. GET /json/version?token=<TOKEN>      # authenticated CDP readiness + WS endpoint
-5. If cdpReady is false, start the browser from CDP Bridge UI or /control/start?token=<TOKEN>&mode=clean|advanced
-```
-
-Rules:
-
-- If bridge or token is wrong, report the exact redacted failure and ask for the correct CDP Bridge WS URL or Tailscale IP + port + token.
-- If cdper MCP is down but `/json/version?token=<TOKEN>` works, use `npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp ...` or raw `playwright-core` against the same endpoint.
-- Do not use a different browser path to pretend a logged-in task succeeded.
-
-## 8. Secrets and memory rules
-
-Allowed to remember:
-
-- bridge host/IP without token
-- bridge port
-- browser mode preference (`clean` / `advanced`)
-- profile label/name if non-sensitive
-- package names and install commands
-
-Never remember or publish:
-
-- CDP token
-- full `ws://...token=...` URL
-- URLs containing `token=`
-- cookies, session dumps, local profile data
-- SSH passwords or API keys
-
-When showing logs or errors, redact tokenized URLs as `ws://<host>:<port>/devtools/browser?token=<REDACTED>`.
+- **Never remember**: CDP token, full `ws://...token=...`, cookies, session data
+- **OK to remember**: Bridge host/IP (without token), bridge port, package versions, install commands
+- **Always redact**: Show `ws://<host>:<port>/devtools/browser?token=<REDACTED>` in any output

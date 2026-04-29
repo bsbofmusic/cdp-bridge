@@ -1,21 +1,24 @@
 # cdper Playwright Agent Quickstart
 
-This repository is the single URL an agent needs for the CDP Bridge + cdper Playwright CDP workflow.
+`cdp-bridge` is the host-side browser appliance entry. `cdper` is the remote agent toolkit. Together they form the Playwright CDP chain from agent tools to the Windows browser.
 
-Repository:
+For the full two-machine first-time guide, start with [Getting Started: cdp-bridge + cdper](./GETTING_STARTED.md).
+
+Repositories:
 
 ```text
-https://github.com/bsbofmusic/cdp-bridge
+Host bridge:    https://github.com/bsbofmusic/cdp-bridge
+Remote toolkit: https://github.com/bsbofmusic/cdper
 ```
 
 ## Components
 
 | Component | Source | Purpose |
 |---|---|---|
-| CDP Bridge | this repository | Windows tray app that exposes the user's local Chrome/Edge through a token-authenticated CDP endpoint over Tailscale |
+| CDP Bridge | `bsbofmusic/cdp-bridge` | Windows tray app that exposes the user's local Chrome/Edge through a token-authenticated CDP endpoint over Tailscale |
 | remote-cdp Skill | `skills/remote-cdp/SKILL.md` | Agent operating rules, secret handling, and Playwright-only routing |
-| cdper CLI | `@bsbofmusic/cdper@latest` | Command-line control layer; use `--kernel playwright-cdp` |
-| cdper MCP | `@bsbofmusic/cdper-mcp@latest` | MCP tool surface for agents; set `CDPER_KERNEL=playwright-cdp` |
+| cdper CLI | [`@bsbofmusic/cdper@latest`](https://www.npmjs.com/package/@bsbofmusic/cdper) / [`bsbofmusic/cdper`](https://github.com/bsbofmusic/cdper) | Command-line control layer; use `--kernel playwright-cdp` |
+| cdper MCP | [`@bsbofmusic/cdper-mcp@latest`](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp) / [`mcp/cdper-mcp`](https://github.com/bsbofmusic/cdper/tree/main/mcp/cdper-mcp) | MCP tool surface for agents; set `CDPER_KERNEL=playwright-cdp` |
 
 Current verified npm baseline:
 
@@ -28,7 +31,7 @@ Current verified npm baseline:
 2. Copy the Bridge WS URL or collect Tailscale IP + bridge port + token.
 3. Store the token locally in `~/.cdp-auth.json` or `~/.cdp-bridge/config.json`; never write it to logs, docs, memory, or issues.
 4. Register cdper MCP with `CDPER_KERNEL=playwright-cdp`.
-5. Verify with `cdper --kernel playwright-cdp doctor --json` or `npm run verify:cdper-playwright` from this repository.
+5. Verify with `cdper --kernel playwright-cdp doctor --deep --json` or `npm run verify:cdper-playwright` from this repository.
 
 ## MCP registration
 
@@ -78,7 +81,7 @@ No clone required:
 
 ```bash
 npx -y @bsbofmusic/cdper-mcp@latest --version
-npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --json
+npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --deep --json
 ```
 
 With this repository cloned:
@@ -91,7 +94,7 @@ npm run verify:cdper-playwright
 The repository verifier runs:
 
 - npm latest metadata check
-- `cdper --kernel playwright-cdp doctor --json`
+- `cdper --kernel playwright-cdp doctor --deep --json`
 - `open https://example.com`
 - `snapshot`
 - `eval`

@@ -13,7 +13,36 @@
 
 ## 🤖 Agent 看到这个仓库后先读这里
 
-这个仓库就是完整入口：**CDP Bridge 宿主端 + remote-cdp Skill + cdper Playwright CDP 体验线**。Agent 只需要拿到 `https://github.com/bsbofmusic/cdp-bridge`，按下面顺序即可部署、连接、验证和体验。
+`cdp-bridge` 是 **host-side browser appliance entry**：在 Windows 宿主机上托管 Chrome/Edge，并通过 token 鉴权的 CDP endpoint 暴露给私网。`cdper` 是 **remote agent toolkit**：提供 MCP、CLI、插件和 runtime。两者合在一起才是完整链路：`Agent -> cdper MCP -> cdper CLI -> CDP Bridge -> Windows Chrome/Edge`。
+
+完整两机端到端指南见：[`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md)。
+
+### Which repo/package do I need?
+
+| Need | Use |
+|---|---|
+| Windows host bridge | [`bsbofmusic/cdp-bridge`](https://github.com/bsbofmusic/cdp-bridge) |
+| Remote Agent MCP | [`@bsbofmusic/cdper-mcp@latest`](https://www.npmjs.com/package/@bsbofmusic/cdper-mcp) |
+| CLI verification | [`@bsbofmusic/cdper@latest`](https://www.npmjs.com/package/@bsbofmusic/cdper) |
+| MCP/CLI/plugin/runtime source | [`https://github.com/bsbofmusic/cdper`](https://github.com/bsbofmusic/cdper) |
+| Host bridge source/release | [`https://github.com/bsbofmusic/cdp-bridge`](https://github.com/bsbofmusic/cdp-bridge) |
+
+### 最快路径 / Golden path
+
+1. **Windows host**：运行 CDP Bridge，启动浏览器，复制 WS URL/token。
+2. **Remote Agent**：注册 `@bsbofmusic/cdper-mcp@latest`，设置 `CDPER_KERNEL=playwright-cdp`，保存私有配置，reload MCP。
+3. **Verify**：运行 `cdper_doctor({ deep: true })`，或用 CLI：
+
+```bash
+npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --deep --json
+```
+
+### Related repositories/packages
+
+- cdper source: <https://github.com/bsbofmusic/cdper>
+- cdper MCP source: <https://github.com/bsbofmusic/cdper/tree/main/mcp/cdper-mcp>
+- cdper CLI package: <https://www.npmjs.com/package/@bsbofmusic/cdper>
+- cdper MCP package: <https://www.npmjs.com/package/@bsbofmusic/cdper-mcp>
 
 固定使用 Playwright 线：
 
@@ -110,7 +139,7 @@ chmod 600 ~/.cdp-auth.json
 
 ```bash
 npx -y @bsbofmusic/cdper-mcp@latest --version
-npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --json
+npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --deep --json
 ```
 
 如果 clone 了本仓库，可运行端到端 smoke：
@@ -157,6 +186,7 @@ try {
 - [中文文档](#chinese-docs)
 - [English Documentation](#english-docs)
 - [官方配套工具](#official-tools)
+- [Getting Started: cdp-bridge + cdper](./docs/GETTING_STARTED.md)
 - [cdper Playwright Agent Quickstart](./docs/CDPER_PLAYWRIGHT_AGENT_QUICKSTART.md)
 - [Agent Skill / Hermes / SUPERMEMORY](#agent-skill--hermes--supermemory)
 - [常见问题](#faq)
