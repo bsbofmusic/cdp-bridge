@@ -18,10 +18,7 @@ Core routing summary:
 
 | Need | Use | Boundary |
 |---|---|---|
-| Standard logged-in remote browser interaction | cdper MCP | Default MCP control path |
-| Advanced scripted logged-in automation | Playwright over CDP | Must `connectOverCDP` to CDP Bridge; never local `launch()` |
-| Logged-in structured reading / markdown | Dokobot | Eyes, not hands; login-state trusted only when configured against the same remote Chrome/CDP Bridge |
-| Public unauthenticated URL fast read | Lightpanda | Independent URL reader; no remote Chrome cookies |
-| bb browser / Browserbase | Out of this chain | Not the user's remote Windows Chrome |
+| Standard logged-in remote browser interaction | cdper MCP with `CDPER_KERNEL=playwright-cdp` | Default MCP control path |
+| Advanced scripted logged-in automation | `playwright-core` over CDP Bridge | Must `connectOverCDP` to CDP Bridge; never local `launch()` |
 
-For the full control-loop, stability, Playwright, Dokobot, Lightpanda, and secret-handling rules, import the canonical skill above.
+For the full control-loop, stability, Playwright CDP, and secret-handling rules, import the canonical skill above.

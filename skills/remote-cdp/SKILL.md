@@ -1,41 +1,93 @@
 # remote-cdp Skill
 
-Use this skill when an agent must operate or read the user's **real remote Windows Chrome/Edge browser** exposed by CDP Bridge.
+Use this skill when an agent must operate the user's **real remote Windows Chrome/Edge browser** exposed by CDP Bridge.
+
+This repository keeps one standard agent path: **cdper + Playwright CDP**.
 
 ## 1. Source of truth
 
-The only true logged-in browser in this workflow is:
+The only browser that counts for this workflow is:
 
 ```text
 Agent / MCP client
-  -> cdper MCP or Playwright connectOverCDP or Dokobot configured against the same remote Chrome
+  -> cdper MCP with CDPER_KERNEL=playwright-cdp
   -> cdp-bridge over Tailscale
   -> user's remote Windows Chrome/Edge session
 ```
 
-Do not replace this logged-in browser with a local Playwright launch, Browserbase, bb browser, curl, web search, or an unauthenticated reader when login state matters.
+For advanced scripts, use `playwright-core` with `chromium.connectOverCDP(<Bridge WS URL>)` against the same endpoint.
 
-## 2. Tool routing decision tree
+Do not replace this logged-in browser with a local browser launch, curl, web search, or any independent unauthenticated browser when login state matters.
 
-| Need | Use | Rule |
-|---|---|---|
-| Standard browser operation: open, snapshot, click, type, wait, eval, screenshot, close | cdper MCP | Default path for agents |
-| Complex scripted automation, rich selectors, batch DOM extraction, high-quality screenshots, vision + coordinate loop | Playwright over CDP | Must connect to the same CDP Bridge WS endpoint; never launch local Chrome |
-| Structured markdown reading from the logged-in remote browser | Dokobot | Trusted for login-state reading only when configured against the same remote Chrome/CDP Bridge; eyes, not hands |
-| Fast reading of public/static URL without login state | Lightpanda | Independent URL reader; opens the URL again and does not inherit remote Chrome cookies |
-| bb browser / Browserbase / platform temporary browser | Not part of this chain | Use only for non-login public browsing; never as logged-in fallback |
+## 2. Install and configure
 
-Short version:
+Latest verified packages:
 
-```text
-Need login state and light interaction?  -> cdper MCP
-Need login state and complex scripting? -> Playwright over CDP
-Need login state and structured reading? -> Dokobot
-Need public URL quick read only?        -> Lightpanda
-Need logged-in state?                   -> never local launch / Browserbase / bb browser
+- `@bsbofmusic/cdper@latest` (verified baseline `1.0.10`)
+- `@bsbofmusic/cdper-mcp@latest` (verified baseline `1.5.9`)
+
+MCP config:
+
+```yaml
+mcp_servers:
+  cdper:
+    command: npx
+    args:
+      - -y
+      - '@bsbofmusic/cdper-mcp@latest'
+    type: stdio
+    enabled: true
+    connect_timeout: 60
+    timeout: 600
+    env:
+      CDPER_KERNEL: playwright-cdp
+      CDPER_NO_UPDATE_CHECK: '1'
 ```
 
-## 3. cdper MCP standard control loop
+Reload the MCP client after config changes. Hermes users should run `/reload-mcp`.
+
+## 3. Private CDP connection config
+
+Ask the user for the CDP Bridge WS URL or for Tailscale IP + bridge port + token. Do not guess token values and do not scan public networks.
+
+Preferred full URL file:
+
+```bash
+cat > ~/.cdp-auth.json <<'JSON'
+{"ws_url":"ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>"}
+JSON
+chmod 600 ~/.cdp-auth.json
+```
+
+Host + token file:
+
+```bash
+mkdir -p ~/.cdp-bridge
+cat > ~/.cdp-bridge/config.json <<'JSON'
+{"bridgePort": <BRIDGE_PORT>, "token": "<TOKEN>"}
+JSON
+chmod 600 ~/.cdp-bridge/config.json
+export CDP_BRIDGE_HOST=<TAILSCALE_IP>
+```
+
+## 4. Verify before acting
+
+Run:
+
+```bash
+npx -y @bsbofmusic/cdper-mcp@latest --version
+npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp doctor --json
+```
+
+If this repository is cloned:
+
+```bash
+npm run verify:cdper-playwright
+```
+
+The verifier runs a real open/snapshot/eval/screenshot/close smoke flow and prints only redacted output.
+
+## 5. cdper MCP standard control loop
 
 Use cdper for the default agent workflow:
 
@@ -57,24 +109,20 @@ Use cdper for the default agent workflow:
 | Click/type | Use refs from the latest snapshot | If ref is missing/stale, fail closed and re-snapshot; do not guess another ref |
 | Wait | Wait for explicit text/selector or a bounded timeout | If timeout occurs, inspect current state with snapshot/eval/screenshot before retrying |
 | Eval | Use for current-page inspection and small DOM extraction | Do not turn cdper into a high-volume crawler |
-| Screenshot | Use as evidence after visual changes | If screenshot fails, report it and try lite/reduced scope if available |
+| Screenshot | Use as evidence after visual changes | If screenshot fails, report it and try `lite` mode |
 | Close | Close only tabs opened by this agent/task | If ownership is uncertain, leave the tab open |
-| Errors | Diagnose with doctor/status/tabs | Never hide failures by falling back to Lightpanda/web search/local browser |
+| Errors | Diagnose with doctor/status/tabs | Never hide failures by switching to a different browser path |
 
-## 4. Playwright over CDP advanced path
+## 6. Advanced Playwright CDP path
 
-Use Playwright when cdper is too low-level for a task: complex selectors, repeated steps, page-object style flows, DOM batch extraction, downloads/uploads, or screenshot + vision + coordinate feedback.
+Use raw Playwright only when cdper is too low-level for a task: complex selectors, repeated flows, page-object style automation, file upload/download, batch DOM extraction, or screenshot + vision feedback.
 
 Critical rule: **connect to CDP Bridge; do not launch a local browser.**
 
-### JavaScript example
-
 ```js
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core');
 
-const wsUrl = 'ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>&sessionId=<SESSION_ID>&sessionLabel=agent';
-const browser = await chromium.connectOverCDP(wsUrl);
-
+const browser = await chromium.connectOverCDP('ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>');
 const context = browser.contexts()[0];
 const page = await context.newPage();
 
@@ -85,70 +133,19 @@ try {
   console.log(text.slice(0, 2000));
 } finally {
   await page.close(); // close only the page this script created
+  await browser.close(); // closes the client connection, not the remote Chrome process
 }
 ```
 
-### Python example
+Playwright safety rules:
 
-```python
-from playwright.async_api import async_playwright
-
-async with async_playwright() as p:
-    browser = await p.chromium.connect_over_cdp(
-        "ws://<TAILSCALE_IP>:<BRIDGE_PORT>/devtools/browser?token=<TOKEN>&sessionId=<SESSION_ID>&sessionLabel=agent"
-    )
-    context = browser.contexts[0]
-    page = await context.new_page()
-    try:
-        await page.goto("https://example.com", wait_until="domcontentloaded")
-        await page.screenshot(path="/tmp/remote-page.png", full_page=True)
-        text = await page.evaluate("() => document.body.innerText")
-        print(text[:2000])
-    finally:
-        await page.close()
-```
-
-### Playwright safety rules
-
-- Use `connectOverCDP` / `connect_over_cdp` only.
-- Do not use `chromium.launch()` for logged-in remote-browser tasks.
-- Prefer `browser.contexts()[0]` / `browser.contexts[0]` to reuse the remote browser's logged-in context.
+- Use `connectOverCDP` only.
+- Do not use `chromium.launch()` for remote-browser tasks.
+- Prefer `browser.contexts()[0]` to reuse the remote browser's logged-in context.
 - Open a new page for the agent task unless the user explicitly asks to operate an existing tab.
-- Close only pages created by the agent. Do not close existing user tabs, the context, or the browser.
-- If cdper MCP is unavailable but bridge is alive, Playwright over CDP may still work because it connects in parallel to the same CDP Bridge endpoint.
+- Close only pages created by the agent. Do not close existing user tabs, the context, or the remote browser process.
 
-## 5. Dokobot read path
-
-Dokobot is the structured reading layer for the logged-in remote browser only when it is configured against the same remote Chrome/CDP Bridge. If it is not connected to that browser, treat it as an independent read-only browser with no guaranteed login state.
-
-Use it for:
-
-- search-result reading
-- SPA pages that require the remote Chrome login state
-- converting complex pages into markdown
-- quickly understanding a page before choosing cdper or Playwright actions
-
-Do not use Dokobot for clicking, typing, form submission, tab cleanup, or workflow control. If the task needs hands, route back to cdper or Playwright over CDP.
-
-## 6. Lightpanda read path
-
-Lightpanda is an independent fast URL reader.
-
-Use it only when:
-
-- the URL is public or does not need cookies/session state
-- you already have a detail URL and want a quick markdown/link/semantic-tree pass
-- failure is acceptable and will not be reported as logged-in browser failure
-
-Do not use Lightpanda for logged-in search pages, private pages, user-specific pages, or as fallback after a cdper/bridge failure. Lightpanda reopens the URL independently and does not inherit remote Chrome login state.
-
-## 7. bb browser / Browserbase boundary
-
-bb browser, Browserbase, or a platform-provided temporary browser is not the user's remote Windows Chrome.
-
-It may be useful for ordinary public-page QA, but it is out of scope for this logged-in CDP Bridge workflow. If a site depends on the user's remote Chrome profile, cookies, extensions, device posture, or existing login, do not use bb browser/Browserbase as a substitute.
-
-## 8. CDP Bridge health and failure handling
+## 7. CDP Bridge health and failure handling
 
 If a tool fails, distinguish the layers:
 
@@ -171,33 +168,10 @@ Recommended checks:
 Rules:
 
 - If bridge or token is wrong, report the exact redacted failure and ask for the correct CDP Bridge WS URL or Tailscale IP + port + token.
-- If cdper MCP is down but `/json/version?token=<TOKEN>` works, Playwright over CDP is a valid advanced path.
-- Do not switch to Lightpanda, web search, curl, local Playwright launch, bb browser, or Browserbase to pretend a logged-in task succeeded.
+- If cdper MCP is down but `/json/version?token=<TOKEN>` works, use `npx -y @bsbofmusic/cdper@latest --kernel playwright-cdp ...` or raw `playwright-core` against the same endpoint.
+- Do not use a different browser path to pretend a logged-in task succeeded.
 
-## 9. Search/read fallback without companion tools
-
-If Dokobot/Lightpanda are unavailable and the user still needs a basic search/read path, cdper can do a slow current-page fallback. This is a continuity fallback, not a crawler.
-
-Example flow:
-
-```text
-1. cdp_open({ url: "https://www.bing.com/search?q=<QUERY>", label: "search" })
-2. cdp_snapshot({ tabId })
-3. If the result list is visible, inspect refs/text.
-4. cdp_eval({
-     tabId,
-     expression: `Array.from(document.querySelectorAll('a'))
-       .map(a => ({ text: a.innerText.trim(), href: a.href }))
-       .filter(x => x.text && x.href)
-       .slice(0, 20)`
-   })
-5. Open only the selected result URL in the remote browser if login state or interaction is needed.
-6. cdp_close({ tabId }) for the search tab if the agent created it.
-```
-
-Do not use this fallback for high-volume crawling or to bypass site rules.
-
-## 10. Secrets and memory rules
+## 8. Secrets and memory rules
 
 Allowed to remember:
 
